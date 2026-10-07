@@ -423,7 +423,7 @@ async function renderShares() {
   view.innerHTML = `
   <header class="page"><div><h1>Shares</h1>
     <p class="sub">Hammerspace NFS or SMB shares the reports run against. hstk needs a direct mount of a Hammerspace share, not a re-export.</p></div>
-    <button class="primary" id="add">Add share</button></header>
+    <div class="row"><button id="import">Import from cluster</button><button class="primary" id="add">Add share</button></div></header>
   <div class="panel">${list.length ? `<div class="scroll"><table class="data">
     <thead><tr><th>Name</th><th>Connection</th><th>Mounted at</th><th>Status</th><th></th></tr></thead><tbody>
     ${list.map(s => `<tr>
@@ -439,10 +439,11 @@ async function renderShares() {
         ${s.kind !== "local" ? (s.status.stale ? `<button class="primary" data-remount="${s.id}">Remount</button>` : s.status.mounted ? `<button data-un="${s.id}">Unmount</button>` : `<button data-mount="${s.id}">Mount</button>`) : ""}
         <button class="ghost" data-edit="${s.id}">Edit</button>
         <button class="ghost danger" data-del="${s.id}">Delete</button></div></td></tr>`).join("")}
-    </tbody></table></div>` : `<div class="empty"><p>No shares yet. Add a Hammerspace share to start building reports.</p><button class="primary" id="add2">Add share</button></div>`}
+    </tbody></table></div>` : `<div class="empty"><p>No shares yet. Add a Hammerspace share, or import them from the cluster's share list.</p><div class="row" style="justify-content:center"><button id="import2">Import from cluster</button><button class="primary" id="add2">Add share</button></div></div>`}
   </div>`;
   const byId = Object.fromEntries(list.map(s => [s.id, s]));
   $$("#add,#add2").forEach(b => b.onclick = () => shareDialog());
+  $$("#import,#import2").forEach(b => b.onclick = () => importDialog());
   $$("[data-edit]").forEach(b => b.onclick = () => shareDialog(byId[b.dataset.edit]));
   $$("[data-mount]").forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = "Mounting…";
     await act(() => api(`/api/shares/${b.dataset.mount}/mount`, {method:"POST"}), "Mounted").finally(renderShares); });
@@ -453,6 +454,102 @@ async function renderShares() {
     if (!confirm(`Delete share "${byId[b.dataset.del].name}"? Reports that use it will stop working.`)) return;
     await act(() => api(`/api/shares/${b.dataset.del}`, {method:"DELETE"}), "Share deleted"); renderShares(); });
 }
+// ---- import shares from `share-list` output
+function insecureReminder(names) {
+  return `<b>${names.length === 1 ? `${esc(names[0])} only accepts` : `${names.length} of these shares only accept`} NFS connections from privileged ports</b> (Insecure: false in the export options).
+    The machine running this app may connect from other ports, for example through Docker's networking on a Mac, and the cluster would then refuse the mount.
+    Before mounting, either <b>enable insecure ports on the share's export</b>, or <b>add an export rule for the machine running this app</b>
+    (the IP address the cluster sees it connect from) that allows insecure ports.${names.length > 1 ? `<div class="hint mono" style="margin-top:4px">${names.map(esc).join(", ")}</div>` : ""}`;
+}
+
+function importDialog() {
+  openDialog(`<form id="imf"><h2>Import shares from the cluster</h2><div class="stack">
+    <p class="hint" style="margin:0">On the cluster, run <code>share-list</code> and upload or paste its output. You'll choose the shares to add next.</p>
+    <textarea id="im-text" style="min-height:240px" placeholder="Paste the output of share-list here"></textarea>
+    <label class="btn" style="align-self:flex-start">Upload file<input type="file" id="im-file" hidden accept=".txt,text/plain"></label>
+  </div><div class="actions"><button data-close>Cancel</button><button class="primary" type="submit">Continue</button></div></form>`, d => {
+    $("#im-file", d).onchange = async e => { const f = e.target.files[0]; if (f) { $("#im-text", d).value = await f.text(); $("#imf", d).requestSubmit(); } };
+    $("#imf", d).onsubmit = async e => {
+      e.preventDefault();
+      const r = await act(() => api("/api/shares/import/parse", {method: "POST", body: {text: $("#im-text", d).value}}));
+      if (!r.shares.length) { toast("The list has no shares besides the root share", true); return; }
+      importPick(r);
+    };
+  }, "min(860px,94vw)");
+}
+
+function importPick(parsed) {
+  const shares = parsed.shares;
+  openDialog(`<form id="ipf"><h2>Choose shares to add</h2><div class="stack">
+    <div class="grid2"><div><label class="f" for="ip-server">Cluster IP address or FQDN</label><input type="text" id="ip-server" placeholder="10.200.10.160 or anvil.example.com" required>
+        <div class="hint">The address the shares are mounted from.</div></div>
+      <div><label class="f">Protocol</label><div class="row" style="gap:18px;min-height:32px">
+        <label class="check"><input type="checkbox" id="ip-nfs" checked>NFS</label><label class="check"><input type="checkbox" id="ip-smb">SMB</label></div>
+        <div class="hint">Choose both to add each share twice, once per protocol.</div></div></div>
+    <div id="ip-smbcreds" hidden><div class="grid2" style="grid-template-columns:repeat(3,1fr)">
+      <div><label class="f" for="ip-user">SMB username</label><input type="text" id="ip-user" autocomplete="off"></div>
+      <div><label class="f" for="ip-pass">Password</label><input type="password" id="ip-pass" autocomplete="new-password"></div>
+      <div><label class="f" for="ip-dom">Domain</label><input type="text" id="ip-dom" placeholder="Optional"></div></div></div>
+    <div class="scroll" style="max-height:300px"><table class="data"><thead><tr><th style="width:32px"><input type="checkbox" id="ip-all" aria-label="Select all"></th><th>Share</th><th>Path</th><th>State</th><th>Notes</th></tr></thead><tbody>
+      ${shares.map((s, i) => `<tr><td><input type="checkbox" data-i="${i}" aria-label="Add ${esc(s.name)}" ${s.state === "PUBLISHED" ? "checked" : ""}></td>
+        <td><b>${esc(s.name)}</b></td><td class="mono">${esc(s.path)}</td><td>${s.state === "PUBLISHED" ? `<span class="pill ok">Published</span>` : `<span class="pill">${esc(s.state ? s.state[0] + s.state.slice(1).toLowerCase() : "—")}</span>`}</td>
+        <td data-note="${i}"></td></tr>`).join("")}</tbody></table></div>
+    ${parsed.root_excluded ? `<p class="hint" style="margin:0">The root share (/) isn't listed: reports and plans work inside a share.</p>` : ""}
+    <div id="ip-reminder"></div>
+    <div class="row" style="gap:18px"><label class="check"><input type="checkbox" id="ip-mount" checked>Mount them now</label>
+      <label class="check"><input type="checkbox" id="ip-auto" checked>Mount when the service starts</label></div>
+  </div><div class="actions"><button data-close>Cancel</button><button class="primary" type="submit" id="ip-go">Add shares</button></div></form>`, d => {
+    const boxes = $$("[data-i]", d);
+    const sel = () => boxes.filter(b => b.checked).map(b => shares[+b.dataset.i]);
+    const protos = () => ["nfs", "smb"].filter(p => $(`#ip-${p}`, d).checked);
+    const update = () => {
+      const nfs = $("#ip-nfs", d).checked, smb = $("#ip-smb", d).checked, picked = sel(), n = picked.length * protos().length;
+      $("#ip-smbcreds", d).hidden = !smb;
+      shares.forEach((s, i) => {
+        const notes = [];
+        if (nfs && !s.insecure_allowed) notes.push(`<span class="pill warn" title="Insecure: false in every export rule">Privileged ports only</span>`);
+        if (smb && !s.smb_browsable) notes.push(`<span class="hint">Not SMB-browsable</span>`);
+        if (s.referral) notes.push(`<span class="hint">Referral</span>`);
+        $(`[data-note="${i}"]`, d).innerHTML = notes.join(" ");
+      });
+      const strict = nfs ? picked.filter(s => !s.insecure_allowed).map(s => s.name) : [];
+      $("#ip-reminder", d).innerHTML = strict.length ? `<div class="wlist"><li class="warn" style="list-style:none">${insecureReminder(strict)}</li></div>` : "";
+      $("#ip-all", d).checked = picked.length === shares.length;
+      $("#ip-go", d).disabled = !n;
+      $("#ip-go", d).textContent = n ? `Add ${n} share${n > 1 ? "s" : ""}` : "Add shares";
+    };
+    boxes.forEach(b => b.onchange = update);
+    $("#ip-all", d).onchange = e => { boxes.forEach(b => b.checked = e.target.checked); update(); };
+    ["#ip-nfs", "#ip-smb"].forEach(id => $(id, d).onchange = update);
+    update();
+    $("#ipf", d).onsubmit = async e => {
+      e.preventDefault();
+      const picked = sel(), protocols = protos();
+      $("#ip-go", d).disabled = true; $("#ip-go", d).textContent = $("#ip-mount", d).checked ? "Adding and mounting…" : "Adding…";
+      try {
+        const r = await api("/api/shares/import", {method: "POST", body: {
+          server: $("#ip-server", d).value.trim(), protocols, shares: picked.map(s => ({name: s.name, path: s.path})),
+          username: $("#ip-user", d).value, password: $("#ip-pass", d).value, domain: $("#ip-dom", d).value,
+          mount: $("#ip-mount", d).checked, auto_mount: $("#ip-auto", d).checked}});
+        const strict = protocols.includes("nfs") ? picked.filter(s => !s.insecure_allowed).map(s => s.name) : [];
+        importResult(r, strict);
+      } catch (err) { toast(err.message, true); update(); }
+    };
+  }, "min(860px,94vw)");
+}
+
+function importResult(r, strict) {
+  renderShares();
+  const created = r.created.length;
+  if (!r.skipped.length && !r.mount_errors.length && !strict.length) { dlg.close(); toast(`Added ${created} share${created === 1 ? "" : "s"}`); return; }
+  openDialog(`<div class="body"><h2>${created ? `Added ${created} share${created === 1 ? "" : "s"}` : "No shares added"}</h2><div class="stack">
+    ${r.skipped.length ? `<div><h3>Skipped</h3><ul class="msgs">${r.skipped.map(x => `<li class="note">${esc(x.name)}: ${esc(x.reason)}</li>`).join("")}</ul></div>` : ""}
+    ${r.mount_errors.length ? `<div><h3>Couldn't mount</h3><ul class="msgs">${r.mount_errors.map(x => `<li class="err">${esc(x.name)}: ${esc(x.error)}</li>`).join("")}</ul>
+      <p class="hint" style="margin:4px 0 0">The shares were added; fix the cause and use <b>Mount</b> on the Shares page.</p></div>` : ""}
+    ${strict.length && created ? `<div class="wlist"><li class="warn" style="list-style:none">${insecureReminder(strict)}</li></div>` : ""}
+  </div><div class="actions"><button class="primary" data-close>Done</button></div></div>`, null, "min(760px,94vw)");
+}
+
 function shareDialog(s) {
   s = s || {kind:"nfs", auto_mount:true};
   openDialog(`<form id="sf"><h2>${s.id ? "Edit share" : "Add share"}</h2><div class="stack">

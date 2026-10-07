@@ -271,3 +271,67 @@ def parse_any(text: str, kind: str | None = None) -> tuple[str, list]:
     if not items:
         raise ValueError("No entries found in this export")
     return kind, items
+
+
+# ------------------------------------------------------------------ share-list
+
+def _export_option(line: str) -> dict:
+    """'[Client specification: *, Access permissions: RW, Root-squash: false, Insecure: false,
+    Security options: [SYS]]' -> dict. The value of Security options has its own brackets."""
+    body = line.strip()
+    if body.startswith("[") and body.endswith("]"):
+        body = body[1:-1]
+    out = {}
+    for part in re.split(r",\s*(?=[A-Z][A-Za-z -]*:)", body):
+        if ":" not in part:
+            continue
+        k, v = part.split(":", 1)
+        out[k.strip()] = v.strip()
+    sec = out.get("Security options", "")
+    return {
+        "client": out.get("Client specification"),
+        "access": out.get("Access permissions"),
+        "root_squash": (out.get("Root-squash") or "").lower() == "true",
+        "insecure": (out.get("Insecure") or "").lower() == "true",
+        "security": [s.strip() for s in sec.strip("[]").split(",") if s.strip()],
+    }
+
+
+def parse_share_list(text: str) -> list[dict]:
+    """Parse `share-list` output. Blocks are separated by blank lines and start with Name:."""
+    shares, cur, last = [], None, None
+    for raw in text.replace("\r", "").splitlines():
+        if not raw.strip():
+            cur, last = None, None
+            continue
+        if re.match(r"total \d+\s*$", raw):
+            continue
+        m = re.match(r"^([A-Za-z][A-Za-z0-9 ()/-]*?):\s*(.*)$", raw)
+        if m and not raw[0].isspace():
+            key, val = m.group(1).strip(), m.group(2).strip()
+            if cur is None:
+                cur = {"_more": {}}
+                shares.append(cur)
+            cur[key] = val
+            last = key
+        elif cur is not None and last:
+            cur["_more"].setdefault(last, []).append(raw.strip())
+    out = []
+    for b in shares:
+        if "Name" not in b:
+            continue
+        exports = [_export_option(l) for l in b["_more"].get("Export options", []) + [b.get("Export options", "")]
+                   if l.strip().startswith("[")]
+        path = b.get("Path") or ""
+        out.append({
+            "name": b["Name"], "path": path, "id": b.get("ID"), "internal_id": b.get("Internal ID"),
+            "lifecycle": b.get("Lifecycle"), "state": b.get("State"),
+            "smb_browsable": (b.get("SMB-browsable") or "").lower() == "on",
+            "referral": (b.get("Is referral") or "").lower() == "yes",
+            "exports": exports,
+            "is_root": path == "/" or b["Name"] == "root",
+            "insecure_allowed": any(e["insecure"] for e in exports),
+        })
+    if not out:
+        raise ValueError("No shares found. Paste the output of the share-list command.")
+    return out

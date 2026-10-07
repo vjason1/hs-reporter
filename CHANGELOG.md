@@ -2,6 +2,11 @@
 
 ## 1.2.0
 
+- **Import shares from the cluster**: paste or upload `share-list` output, enter the cluster's
+  IP or FQDN, choose NFS, SMB or both, and tick the shares to add (the root share is left
+  out; existing shares are skipped). Shares whose exports only allow privileged ports are
+  flagged, with a reminder to enable insecure ports on the export or add an export rule for
+  this machine; failed NFS mounts with "access denied" repeat it.
 - **Settings page** (gear icon) for global configuration: crawl speed (Normal, Gentle,
   Slowest, Custom) for all reports, schedules and objective-planning scans; limits (hs
   commands at once across everything, reports and scans at once, timeouts, output, folder

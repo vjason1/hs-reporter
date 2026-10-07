@@ -50,3 +50,12 @@ def test_read_only_volume_detected():
                                                           "Access type:             Read Only", 1)
     _, vols = clusterinfo.parse_any(text)
     assert vols[0]["read_only"] and not vols[1]["read_only"]
+
+
+def test_share_list():
+    shares = clusterinfo.parse_share_list((FIX / "share-list.txt").read_text())
+    assert [(s["name"], s["path"], s["is_root"]) for s in shares] == [("root", "/", True),
+                                                                      ("stowerstiertest", "/stowerstiertest", False)]
+    e = shares[1]["exports"][0]
+    assert e == {"client": "*", "access": "RW", "root_squash": False, "insecure": False, "security": ["SYS"]}
+    assert shares[1]["state"] == "PUBLISHED" and shares[1]["smb_browsable"] and not shares[1]["insecure_allowed"]

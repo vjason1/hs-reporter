@@ -8,6 +8,28 @@ mount doesn't have the gateway.
 
 ![Shares page](screenshots/shares.png)
 
+## Importing shares from the cluster
+
+**Shares → Import from cluster** adds shares from the cluster's own list:
+
+1. On the cluster, run `share-list` and upload or paste its output.
+2. Enter the cluster's IP address or FQDN, and choose **NFS**, **SMB** or both. With both, each
+   share is added twice, as "name (NFS)" and "name (SMB)". SMB needs a username and password.
+3. Tick the shares to add. Published shares are ticked to start with; the root share (`/`)
+   isn't offered, since reports and plans work inside a share.
+
+NFS shares use the share's path as the export (`/stowerstiertest`) and SMB shares use its name
+(`stowerstiertest`). Shares that are already set up with the same server and export are
+skipped. You can mount them right away and have them mounted when the service starts.
+
+**Privileged ports.** A share whose export options all say `Insecure: false` only accepts NFS
+connections from privileged (low-numbered) source ports. The machine running this app may
+connect from other ports, for example through Docker's networking on a Mac, and the cluster
+then refuses the mount with "access denied". The import flags these shares and reminds you to
+either **enable insecure ports on the share's export**, or **add an export rule for the machine
+running this app** (the IP address the cluster sees it connect from) that allows insecure ports.
+A failed NFS mount with "access denied" repeats the reminder.
+
 ## Connection types
 
 | Type | What the container does | Container needs |

@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import re
 import json
 import os
 import secrets
@@ -121,6 +122,65 @@ def create_share(body: dict = Body(...)):
     s = {k: body.get(k) for k in SHARE_FIELDS}
     _validate_share(s)
     return _public_share(store.shares.put(s))
+
+
+@app.post("/api/shares/import/parse")
+def parse_share_list(body: dict = Body(...)):
+    """Read `share-list` output; the root share is left out (reports run inside a share)."""
+    try:
+        found = clusterinfo.parse_share_list(body.get("text") or "")
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"shares": [s for s in found if not s["is_root"]], "root_excluded": sum(s["is_root"] for s in found)}
+
+
+_HOST_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$|^\[?[0-9A-Fa-f:]+\]?$")
+
+
+@app.post("/api/shares/import")
+async def import_shares(body: dict = Body(...)):
+    """Add shares picked from share-list output, over NFS, SMB or both."""
+    server = (body.get("server") or "").strip()
+    if not server or not _HOST_RE.match(server):
+        raise HTTPException(422, "Enter the cluster's IP address or FQDN")
+    protocols = [p for p in ("nfs", "smb") if p in (body.get("protocols") or [])]
+    if not protocols:
+        raise HTTPException(422, "Choose NFS, SMB or both")
+    if "smb" in protocols and not (body.get("username") or "").strip():
+        raise HTTPException(422, "SMB needs a username")
+    picked = [s for s in body.get("shares") or [] if s.get("name") and (s.get("path") or "") != "/" and s.get("name") != "root"]
+    if not picked:
+        raise HTTPException(422, "Choose at least one share")
+    both = len(protocols) == 2
+    existing = store.shares.all()
+
+    def exists(kind, export):
+        return next((e for e in existing if e.get("kind") == kind and (e.get("server") or "").lower() == server.lower()
+                     and (e.get("export") or "").strip("/") == export.strip("/")), None)
+
+    created, skipped, mount_errors = [], [], []
+    for s in picked:
+        for kind in protocols:
+            export = s["path"] if kind == "nfs" else s["name"]
+            name = s["name"] + (f" ({kind.upper()})" if both else "")
+            dup = exists(kind, export)
+            if dup:
+                skipped.append({"name": name, "reason": f"already added as {dup['name']}"})
+                continue
+            rec = {"name": name, "kind": kind, "server": server, "export": export, "options": None,
+                   "auto_mount": bool(body.get("auto_mount", True)), "notes": f"Imported from share-list ({s['name']})"}
+            if kind == "smb":
+                rec.update(username=body.get("username").strip(), password=body.get("password") or "",
+                           domain=(body.get("domain") or "").strip() or None)
+            rec = store.shares.put(rec)
+            existing.append(rec)
+            if body.get("mount"):
+                try:
+                    await shares.mount(rec)
+                except (shares.ShareError, asyncio.TimeoutError) as e:
+                    mount_errors.append({"name": name, "error": str(e)[-300:]})
+            created.append(_public_share(rec))
+    return {"created": created, "skipped": skipped, "mount_errors": mount_errors}
 
 
 @app.put("/api/shares/{sid}")

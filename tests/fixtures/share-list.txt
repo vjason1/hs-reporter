@@ -1,0 +1,24 @@
+total 2
+Name:                    root
+Internal ID:             1
+ID:                      e0bc6fe9-6c88-4bae-bac7-a0fcfdb2c132
+Path:                    /
+Lifecycle:               CREATED
+State:                   PUBLISHED
+Size limit state:        NORMAL
+Export options:          
+                         [Client specification: *, Access permissions: RW, Root-squash: false, Insecure: false, Security options: [SYS]]
+SMB-browsable:           On
+Is referral:             No
+
+Name:                    stowerstiertest
+Internal ID:             12
+ID:                      8792ba0c-985a-459b-8b49-aba2b8a4d58c
+Path:                    /stowerstiertest
+Lifecycle:               CREATED
+State:                   PUBLISHED
+Size limit state:        NORMAL
+Export options:          
+                         [Client specification: *, Access permissions: RW, Root-squash: false, Insecure: false, Security options: [SYS]]
+SMB-browsable:           On
+Is referral:             No

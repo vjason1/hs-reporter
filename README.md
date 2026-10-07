@@ -63,8 +63,9 @@ A containerized web service for Hammerspace administrators, with two jobs:
 - **Settings page** for global configuration: crawl speed (Normal, Gentle, Slowest or Custom)
   for every report, schedule and scan, server-wide limits such as a cap on `hs` commands at
   once, and default NFS and SMB mount options. Changes apply without a restart.
-- **Share management**: the container mounts NFS or SMB shares itself, or uses shares already
-  mounted on the host; it detects and recovers stale mounts.
+- **Share management**: import shares from the cluster's `share-list` output (NFS, SMB or
+  both), or add them one by one. The container mounts NFS or SMB shares itself, or uses shares
+  already mounted on the host, and detects and recovers stale mounts.
 - **A console-style GUI** with Hammerspace's look, optional sign-in, and a JSON API for
   everything the GUI does.
 
@@ -80,8 +81,9 @@ cd hs-reporter
 docker compose up -d --build
 ```
 
-Open <http://localhost:8080> and sign in, then add a share: **Shares** → **Add share**, enter
-the Hammerspace server and export (NFS) or share name (SMB), and mount it.
+Open <http://localhost:8080> and sign in, then add shares: **Shares** → **Import from cluster**
+and paste the output of the cluster's `share-list` command, or **Add share** to enter one by
+hand. If NFS mounts are refused, see [Privileged ports](docs/shares.md#importing-shares-from-the-cluster).
 
 **To run a report:**
 

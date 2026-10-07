@@ -4,7 +4,7 @@
 
 | Message | Likely cause | What to do |
 |---|---|---|
-| `mount.nfs: access denied by server` (export open to everyone) | The export requires privileged source ports, and the container's traffic is translated | Allow non-privileged ports on the export, or mount on the host |
+| `mount.nfs: access denied by server` (export open to everyone) | The export requires privileged source ports (`Insecure: false`), and the container's traffic arrives from other ports | Enable insecure ports on the share's export, or add an export rule for this machine's IP that allows them, or mount on the host |
 | `mount.nfs: Operation not permitted` with `vers=4.2` | NFS 4.2 is limited to approved client kernels | Use NFSv3 (the default), or run on a host with an approved kernel |
 | `rpc.statd is not running but is required for remote locking` | NFSv3 without `nolock` | Add `nolock` (the default options include it) |
 | `mount: permission denied` from the container | The container can't mount | Keep `cap_add: SYS_ADMIN` and `apparmor:unconfined`, or use `privileged: true`, or mount on the host |

@@ -115,3 +115,34 @@ def test_missing_hs_fails_the_run_clearly(client, share, monkeypatch):
     r = wait_for(client, client.post("/api/run", json=p).json()["run_id"], timeout=5)
     assert r["status"] == "failed"
     assert "Couldn't start /nonexistent/hs" in r["error"] and "HSR_HS_BIN" in r["error"]
+
+
+def test_import_shares_from_share_list(client):
+    from pathlib import Path
+    text = (Path(__file__).parent / "fixtures" / "share-list.txt").read_text()
+    parsed = client.post("/api/shares/import/parse", json={"text": text}).json()
+    assert [s["name"] for s in parsed["shares"]] == ["stowerstiertest"] and parsed["root_excluded"] == 1
+    s = parsed["shares"][0]
+    assert s["path"] == "/stowerstiertest" and s["state"] == "PUBLISHED" and not s["insecure_allowed"]
+    pick = [{"name": s["name"], "path": s["path"]}]
+
+    bad = client.post("/api/shares/import", json={"server": "", "protocols": ["nfs"], "shares": pick})
+    assert bad.status_code == 422 and "IP address or FQDN" in bad.json()["detail"]
+    assert client.post("/api/shares/import", json={"server": "10.200.10.160", "protocols": [], "shares": pick}).status_code == 422
+    nouser = client.post("/api/shares/import", json={"server": "10.200.10.160", "protocols": ["smb"], "shares": pick})
+    assert "username" in nouser.json()["detail"]
+
+    r = client.post("/api/shares/import", json={"server": "anvil.example.com", "protocols": ["nfs", "smb"],
+                                                 "shares": pick, "username": "svc", "password": "pw",
+                                                 "auto_mount": False}).json()
+    got = {c["name"]: c for c in r["created"]}
+    assert set(got) == {"stowerstiertest (NFS)", "stowerstiertest (SMB)"}
+    assert got["stowerstiertest (NFS)"]["export"] == "/stowerstiertest"     # NFS: the share's path
+    assert got["stowerstiertest (SMB)"]["export"] == "stowerstiertest"      # SMB: the share's name
+    assert got["stowerstiertest (SMB)"]["username"] == "svc" and "password" not in got["stowerstiertest (SMB)"]
+
+    again = client.post("/api/shares/import", json={"server": "ANVIL.example.com", "protocols": ["nfs"],
+                                                     "shares": pick + [{"name": "root", "path": "/"}]}).json()
+    assert again["created"] == [] and again["skipped"][0]["reason"] == "already added as stowerstiertest (NFS)"
+    for c in r["created"]:
+        client.delete(f"/api/shares/{c['id']}")

@@ -12,6 +12,8 @@ Basic credentials (`curl -u user:password ...`).
 | `PUT /api/shares/{id}` / `DELETE /api/shares/{id}` | Change or remove a share |
 | `POST /api/shares/{id}/mount` / `unmount` / `remount` | Mount control |
 | `GET /api/shares/{id}/browse?path=/projects` | List the folders in a path |
+| `POST /api/shares/import/parse` | Read `share-list` output: `{"text": "..."}` → the shares, without the root share |
+| `POST /api/shares/import` | Add shares: `server`, `protocols` (`["nfs"]`, `["smb"]` or both), `shares` (`[{"name","path"}]`), SMB `username`/`password`/`domain`, `mount`, `auto_mount` |
 
 ```bash
 curl -u admin:pw -X POST localhost:8080/api/shares -H 'content-type: application/json' \

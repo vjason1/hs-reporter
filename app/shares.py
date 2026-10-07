@@ -154,7 +154,12 @@ async def mount(share: dict) -> dict:
     rc, out = await _run(*cmd)
     if rc != 0:
         # With -v, the useful line is usually last; keep enough context to diagnose.
-        raise ShareError((out or f"mount exited with {rc}")[-1200:])
+        msg = (out or f"mount exited with {rc}")[-1200:]
+        if share["kind"] == "nfs" and "access denied" in msg.lower():
+            msg += ("\nThe export may only accept connections from privileged ports (Insecure: false). "
+                    "Enable insecure ports on the share's export, or add an export rule for the machine "
+                    "running this app (the IP address the cluster sees it connect from) that allows them.")
+        raise ShareError(msg)
     return status(share)
 
 
