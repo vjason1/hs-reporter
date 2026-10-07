@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1
+
+- A run or scan whose `hs` command can't be started (not installed, not executable, wrong
+  `HSR_HS_BIN`) now fails at once with a clear message instead of staying "running".
+- Tests make the stand-in `hs` executable themselves; CI uses actions/checkout@v5 and
+  actions/setup-python@v6, pins Ubuntu 24.04, and has job time limits.
+
 ## 1.1.0
 
 - **Objective planning** (new Objectives tab): scan a share for only the metadata fields the

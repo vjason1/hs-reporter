@@ -15,6 +15,9 @@ _tmp = Path(tempfile.mkdtemp(prefix="hsr-test-"))
 SHARE = _tmp / "external"
 for d in ("proj/a/a1", "proj/b", "proj/empty", "proj/.hidden"):
     (SHARE / d).mkdir(parents=True, exist_ok=True)
+# Git or an unzip can drop the execute bit; the stand-in hs must be runnable.
+FAKE_HS = Path(__file__).parent / "fake_hs.py"
+FAKE_HS.chmod(0o755)
 os.environ.update({
     "HSR_DATA_DIR": str(_tmp / "data"),
     "HSR_LOCAL_ROOT": str(SHARE),

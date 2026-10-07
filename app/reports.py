@@ -751,8 +751,13 @@ def to_prometheus(run: dict) -> str:
 # ---------------------------------------------------------------- execution
 
 async def _exec(cmd: list[str], cwd: str) -> dict:
-    proc = await asyncio.create_subprocess_exec(
-        *cmd, cwd=cwd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd, cwd=cwd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    except OSError as e:  # not installed, not executable, bad cwd: fail the command, not the run
+        return {"rc": 127, "stdout": "", "truncated": False,
+                "stderr": f"Couldn't start {cmd[0]}: {e.strerror or e}. "
+                          "Check HSR_HS_BIN and that hstk is installed in the container."}
     out = bytearray()
     truncated = False
 
@@ -852,6 +857,15 @@ async def _run_hs_unlimited(cmd: list[str], full: Path, share: dict) -> dict:
 
 
 async def execute(run: dict, export: bool = False) -> dict:
+    """Run a report; whatever goes wrong, the run ends up done or failed, never stuck."""
+    try:
+        return await _execute(run, export)
+    except Exception as e:
+        run.update(status="failed", error=f"Unexpected error: {e}", finished=store.now())
+        return store.runs.put(run)
+
+
+async def _execute(run: dict, export: bool = False) -> dict:
     global _sem
     if _sem is None:
         _sem = asyncio.Semaphore(MAX_CONCURRENT)

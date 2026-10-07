@@ -83,3 +83,13 @@ def test_paced_folder_listing(client, share):
                       throttle={"preset": "custom", "concurrency": 4, "pause": 0, "list_rate": 5})
     assert r["status"] == "done" and len(r["view"]["rows"]) == 5
     assert time.time() - t0 >= 0.8
+
+
+def test_missing_hs_fails_the_run_clearly(client, share, monkeypatch):
+    from app import reports
+    monkeypatch.setattr(reports, "HS_BIN", "/nonexistent/hs")
+    p = {"name": "x", "share_id": share["id"], "paths": ["/proj"], "mode": "sum",
+         "sum": {"group_by": [], "metrics": ["file_count"]}}
+    r = wait_for(client, client.post("/api/run", json=p).json()["run_id"], timeout=5)
+    assert r["status"] == "failed"
+    assert "Couldn't start /nonexistent/hs" in r["error"] and "HSR_HS_BIN" in r["error"]
