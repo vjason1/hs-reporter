@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0
+
+- **Settings page** (gear icon) for global configuration: crawl speed (Normal, Gentle,
+  Slowest, Custom) for all reports, schedules and objective-planning scans; limits (hs
+  commands at once across everything, reports and scans at once, timeouts, output, folder
+  and scan sizes); and default NFS and SMB mount options. Changes apply without a restart.
+- Crawl speed is no longer set per report or per plan; the designer and plan pages show the
+  speed in effect with a link to Settings.
+- Environment variables still work, as initial values for anything not changed on the page.
+
 ## 1.1.1
 
 - A run or scan whose `hs` command can't be started (not installed, not executable, wrong

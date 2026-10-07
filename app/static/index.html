@@ -269,6 +269,7 @@ pre.raw{background:#F6F7F9;border:1px solid var(--rule-2);padding:12px;font:12px
     <a href="#/schedules" title="Schedules"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 3a1 1 0 0 1 1 1v5.6l3.7 2.1a1 1 0 1 1-1 1.8l-4.2-2.5A1 1 0 0 1 11 12V6a1 1 0 0 1 1-1z"/></svg><span>Schedules</span></a>
     <a href="#/plans" title="Objectives"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2zm0 4a6 6 0 1 0 6 6h-2a4 4 0 1 1-4-4V6zm0 4a2 2 0 1 0 2 2h-2v-2zm3-8v3.6l-3.7 3.7 1.4 1.4L16.4 7H20l2-2-3-1-1-3-3 1z"/></svg><span>Objectives</span></a>
     <a href="#/shares" title="Shares"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v1H2V6zm0 4h20v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8zm13 4.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 0 0-3 0z"/></svg><span>Shares</span></a>
+    <a href="#/settings" title="Settings"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.8 1.7 1l.4 2.6h4l.4-2.6c.6-.2 1.2-.6 1.7-1l2.5 1 2-3.5L19.4 13zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg><span>Settings</span></a>
   </nav>
   <main id="view" tabindex="-1"></main>
 </div>
@@ -300,6 +301,8 @@ async function api(path, opts={}) {
 function toast(msg, bad=false) {
   const t = document.createElement("div");
   t.className = "toast" + (bad ? " bad" : ""); t.textContent = msg; t.setAttribute("role", "status");
+  const others = $$(".toast");
+  t.style.bottom = `${20 + others.reduce((h, o) => h + o.offsetHeight + 8, 0)}px`;
   document.body.appendChild(t); setTimeout(() => t.remove(), bad ? 6000 : 2800);
 }
 async function act(fn, okMsg) { try { const r = await fn(); if (okMsg) toast(okMsg); return r; } catch (e) { toast(e.message, true); throw e; } }
@@ -384,7 +387,7 @@ function openDialog(html, onMount, width) {
 // ---------------------------------------------------------------- router
 const routes = {
   reports: renderReports, design: renderDesigner, runs: renderRuns, run: renderRun,
-  schedules: renderSchedules, shares: renderShares, plans: renderPlans, plan: renderPlan,
+  schedules: renderSchedules, shares: renderShares, plans: renderPlans, plan: renderPlan, settings: renderSettings,
 };
 async function route() {
   clearTimeout(pollTimer);
@@ -523,7 +526,6 @@ const BLANK = () => ({name:"", description:"", share_id:"", paths:["/"], mode:"s
   eval:{source:"fields", fields:["dpath","owner","space_used"], recursive:true, files_only:true, system_query:"storage_volumes"},
   filters:{}, custom_expression:"", custom_columns:"", custom_verb:"sum", nonfiles:false,
   folders:{enabled:false, depth:1, include_hidden:false},
-  throttle:{preset:"normal"},
   display:{fields:[], sort_by:"", sort_desc:true, limit:null, size_unit:"auto"}});
 
 async function renderDesigner(id) {
@@ -531,7 +533,6 @@ async function renderDesigner(id) {
   const base = BLANK();
   const D = existing ? {...base, ...clone(existing), sum:{...base.sum, ...(existing.sum||{})}, eval:{...base.eval, ...(existing.eval||{})},
       filters:{...(existing.filters||{})}, folders:{...base.folders, ...(existing.folders||{})},
-      throttle:{...base.throttle, ...(existing.throttle||{})},
       display:{...base.display, ...(existing.display||{})}} : base;
   if (!D.share_id && shares.length) D.share_id = shares[0].id;
   let uiType = D.mode === "custom" ? "custom" : D.mode === "eval" ? (D.eval.source === "system" ? "system" : "listing") : "summary";
@@ -562,7 +563,7 @@ async function renderDesigner(id) {
         <div id="d-type-body" class="stack"></div>
       </section>
       <section class="panel stack" id="d-filters-panel"><h2>Filters</h2><div id="d-filters"></div></section>
-      <section class="panel stack" id="d-speed-panel"><h2>Crawl speed</h2><div id="d-speed"></div></section>
+      <p class="hint" id="d-speed-note"></p>
     </div>
     <aside class="sticky stack">
       <section class="query"><div class="qhead"><h3>HammerScript</h3><span class="qtag" id="q-tag" hidden>Edited</span><span class="spacer"></span>
@@ -785,25 +786,7 @@ async function renderDesigner(id) {
 
   // --- crawl speed
   function drawSpeed() {
-    const T = D.throttle, P = CAT.throttle_presets, cur = T.preset || "normal";
-    const shown = cur === "custom" ? T : P[cur];
-    const desc = x => `${x.concurrency} hs command${x.concurrency > 1 ? "s" : ""} at once, ${+x.pause ? x.pause + "s pause between commands" : "no pause"}, ${+x.list_rate ? x.list_rate + " folder listings per second" : "folder listing not limited"}`;
-    $("#d-speed").innerHTML = `
-      <div class="seg" id="sp-preset">${[...Object.entries(P).map(([k, v]) => [k, v.label]), ["custom", "Custom"]].map(([k, l]) =>
-        `<button type="button" data-p="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>
-      ${cur === "custom" ? `<div class="grid2" style="grid-template-columns:repeat(3,1fr)">
-        <div><label class="f" for="sp-c">hs commands at once</label><input type="number" id="sp-c" min="1" max="16" value="${esc(shown.concurrency ?? 1)}"></div>
-        <div><label class="f" for="sp-p">Pause between commands (s)</label><input type="number" id="sp-p" min="0" max="3600" step="0.5" value="${esc(shown.pause ?? 0)}"></div>
-        <div><label class="f" for="sp-r">Folder listings per second</label><input type="number" id="sp-r" min="0" max="1000" value="${esc(shown.list_rate ?? 0)}" placeholder="0 = no limit"></div></div>`
-      : `<p class="hint" style="margin:0">${esc(desc(shown))}.</p>`}
-      <p class="hint" style="margin:0">Paces the commands this report sends. Per-folder reports send one hs command per folder and list folders over the mount, so slower settings spread that work out over more time. A single hs sum is one operation on the cluster and can't be slowed down from here; break it down by folder to split it into smaller pieces. This server runs at most ${CAT.max_hs_processes} hs commands at once across all reports.</p>`;
-    $$("#sp-preset button").forEach(b => b.onclick = () => {
-      const k = b.dataset.p;
-      D.throttle = k === "custom" ? {preset: "custom", concurrency: shown.concurrency, pause: shown.pause, list_rate: shown.list_rate} : {preset: k};
-      drawSpeed(); refresh();
-    });
-    const num = (id, key) => { const el = $(id); if (el) el.oninput = () => { D.throttle[key] = el.value === "" ? 0 : +el.value; refresh(); }; };
-    num("#sp-c", "concurrency"); num("#sp-p", "pause"); num("#sp-r", "list_rate");
+    $("#d-speed-note").innerHTML = crawlNote(CAT.crawl, CAT.max_hs_processes);
   }
 
   drawType(); drawFilters(); drawSpeed();
@@ -896,7 +879,7 @@ async function renderRun(id) {
     ${r.error ? `<div class="errbox" style="margin-bottom:14px">${esc(r.error)}</div>` : ""}
     ${["queued","running"].includes(r.status) ? `<div class="panel empty"><p>${r.status === "queued" ? "Waiting for a free slot…" : (r.phase === "listing" ? `Listing folders${r.folders_found ? ` (${num(r.folders_found)} found so far)` : ""}. `
           : r.target_count > 1 ? `Scanned ${num(r.targets_done || 0)} of ${num(r.target_count)} folders. ` : "hs is walking the file tree. ")
-          + (r.throttle && r.throttle.preset !== "normal" ? `Crawl speed: ${esc(r.throttle.preset)}. ` : "") + "Large shares can take a while; this page updates on its own."}</p></div>` : `
+          + (r.throttle && r.throttle.preset !== "normal" ? `Crawl speed: ${esc(r.throttle.preset)} (<a href="#/settings">Settings</a>). ` : "") + "Large shares can take a while; this page updates on its own."}</p></div>` : `
     <section class="panel">
       ${v.available.length ? `<div class="toolbar"><span class="hint">Fields</span><div class="colpick">${v.available.map(c => `<button data-col="${esc(c)}" aria-pressed="${v.columns.includes(c)}">${esc(c)}</button>`).join("")}</div>
         <span class="spacer"></span>
@@ -1102,6 +1085,79 @@ function schedDialog(s, defs) {
   });
 }
 
+function crawlNote(c, maxHs) {
+  if (!c) return "";
+  const label = {normal: "Normal", gentle: "Gentle", slowest: "Slowest", custom: "Custom"}[c.preset] || c.preset;
+  return `Crawl speed: <b>${label}</b> (${c.concurrency} hs command${c.concurrency > 1 ? "s" : ""} at once, `
+    + `${+c.pause ? c.pause + " s between commands" : "no pause"}, ${+c.list_rate ? c.list_rate + " folder listings/s" : "folder listing not limited"})`
+    + `${maxHs ? `, at most ${maxHs} hs commands at once overall` : ""}. <a href="#/settings">Change in Settings</a>`;
+}
+
+// ---------------------------------------------------------------- settings
+async function renderSettings() {
+  let S = await api("/api/settings");
+  let draft = {...S.values};
+  const L = S.limits;
+  const field = (key, unit, step = 1, label) => `<div><label class="f" for="st-${key}">${esc(label || L[key].label)}</label>
+    <div class="row" style="flex-wrap:nowrap"><input type="number" id="st-${key}" data-key="${key}" min="${L[key].min}" max="${L[key].max}" step="${step}" value="${esc(draft[key])}" style="flex:1">${unit ? `<span>${unit}</span>` : ""}</div>
+    <div class="hint">Default ${esc(S.defaults[key])}${unit ? " " + unit : ""}; ${L[key].min}–${L[key].max}.</div></div>`;
+  function draw() {
+    const cp = draft.crawl_preset, P = S.crawl_presets;
+    const shown = cp === "custom" ? {concurrency: draft.crawl_concurrency, pause: draft.crawl_pause, list_rate: draft.crawl_list_rate} : P[cp];
+    const dirty = JSON.stringify(draft) !== JSON.stringify(S.values);
+    view.innerHTML = `
+    <header class="page"><div><h1>Settings</h1><p class="sub">Global settings for reporting and objective planning. Changes apply to new hs commands right away; runs already going finish with the settings they started with.</p></div>
+      <div class="row"><button id="st-reset">Reset to defaults</button><button class="primary" id="st-save" ${dirty ? "" : "disabled"}>${dirty ? "Save settings" : "Saved"}</button></div></header>
+    <div class="stack">
+      <section class="panel stack"><h2>Crawl speed</h2>
+        <p class="hint" style="margin-top:-6px">Paces the hs commands and folder listings the reporter sends, for every report, schedule and objective-planning scan. A single hs sum is one operation on the cluster and can't be slowed from here; per-folder reports and planning scans are where pacing helps.</p>
+        <div class="seg" id="st-crawl">${[...Object.entries(P).map(([k, v]) => [k, v.label]), ["custom", "Custom"]].map(([k, l]) => `<button type="button" data-p="${k}" aria-pressed="${cp === k}">${l}</button>`).join("")}</div>
+        ${cp === "custom" ? `<div class="grid2" style="grid-template-columns:repeat(3,1fr)">${field("crawl_concurrency", "", 1, "hs commands at once")}${field("crawl_pause", "s", 0.5, "Pause between commands")}${field("crawl_list_rate", "per s", 1, "Folder listings per second")}</div>`
+          : `<p class="hint" style="margin:0">${shown.concurrency} hs command${shown.concurrency > 1 ? "s" : ""} at once, ${+shown.pause ? shown.pause + " s between commands" : "no pause between commands"}, ${+shown.list_rate ? shown.list_rate + " folder listings per second" : "folder listing not limited"}.</p>`}
+      </section>
+      <section class="panel stack"><h2>Limits</h2>
+        <div class="grid2" style="grid-template-columns:repeat(3,1fr)">
+          ${field("max_hs_processes", "")}${field("max_concurrent", "")}${field("run_timeout", "s")}
+          ${field("max_output_mb", "MB")}${field("max_folders", "")}${field("plan_max_files", "")}${field("plan_batch", "")}
+        </div>
+        <p class="hint" style="margin:0">The cap on hs commands applies across all reports, schedules and scans together, whatever the crawl speed asks for. Reports and scans beyond the limit wait in a queue.</p>
+      </section>
+      <section class="panel stack"><h2>Mount defaults</h2>
+        <div class="grid2">
+          <div><label class="f" for="st-nfs">NFS mount options</label><input type="text" id="st-nfs" data-key="nfs_options" class="mono" value="${esc(draft.nfs_options)}">
+            <div class="hint">Default ${esc(S.defaults.nfs_options)}. v3 mounts always get nolock. Keep attribute caching on: actimeo=0 or noac make hs fail with stale file handles. Use vers=4.2 on hosts with an approved kernel.</div></div>
+          <div><label class="f" for="st-smb">SMB mount options</label><input type="text" id="st-smb" data-key="smb_options" class="mono" value="${esc(draft.smb_options)}">
+            <div class="hint">Default ${esc(S.defaults.smb_options)}. noserverino is always added; hstk needs it on SMB.</div></div>
+        </div>
+        <p class="hint" style="margin:0">Used when a share's own mount options are blank, the next time it's mounted. <a href="#/shares">Shares</a></p>
+      </section>
+    </div>`;
+    $$("#st-crawl button").forEach(b => b.onclick = () => {
+      const k = b.dataset.p;
+      if (k === "custom" && draft.crawl_preset !== "custom" && P[draft.crawl_preset]) {
+        const base = P[draft.crawl_preset];  // start custom from the preset that was selected
+        Object.assign(draft, {crawl_concurrency: base.concurrency, crawl_pause: base.pause, crawl_list_rate: base.list_rate});
+      }
+      draft.crawl_preset = k; draw();
+    });
+    $$("[data-key]").forEach(inp => inp.oninput = () => {
+      const k = inp.dataset.key;
+      draft[k] = inp.type === "number" ? (inp.value === "" ? "" : +inp.value) : inp.value;
+      const d = JSON.stringify(draft) !== JSON.stringify(S.values);
+      $("#st-save").disabled = !d; $("#st-save").textContent = d ? "Save settings" : "Saved";
+    });
+    $("#st-save").onclick = async () => {
+      try { S = await api("/api/settings", {method: "PUT", body: draft}); draft = {...S.values}; CAT = null; PCAT = null; toast("Settings saved"); draw(); }
+      catch (e) { toast(e.message, true); }
+    };
+    $("#st-reset").onclick = async () => {
+      if (!confirm("Reset every setting to its default?")) return;
+      S = await act(() => api("/api/settings/reset", {method: "POST"}), "Settings reset"); draft = {...S.values}; CAT = null; PCAT = null; draw();
+    };
+  }
+  draw();
+}
+
 // ---------------------------------------------------------------- objective planning
 let PCAT = null;
 const EFFECT_BADGE = {place: ["place", "Place"], confine: ["limit", "Confine"], exclude: ["limit", "Exclude"],
@@ -1228,18 +1284,16 @@ async function renderPlan(id) {
         <div><label class="f" for="meta-fn">Tag, label, keyword or attribute</label><div class="row" style="flex-wrap:nowrap;gap:6px">
           <select id="meta-fn" style="width:170px">${PCAT.meta_funcs.map(f => `<option>${f}</option>`).join("")}</select>
           <input type="text" id="meta-name" placeholder="name" style="width:150px"><button type="button" id="meta-add">Add</button></div></div>
-        <div><label class="f" for="scan-speed">Crawl speed</label><select id="scan-speed" style="width:150px">
-          ${Object.entries(PCAT.throttle_presets).map(([k, v]) => `<option value="${k}" ${((P.throttle || {}).preset || "normal") === k ? "selected" : ""}>${v.label}</option>`).join("")}</select></div>
         <span class="spacer"></span>
         <button class="primary" id="scan-btn" ${scan.status === "running" ? "disabled" : ""}>${scan.status === "running" ? "Scanning…" : scan.status ? "Scan again" : "Scan"}</button>
       </div>
-      <div style="margin-top:10px">${scanStatus(scan, changed)}</div>`;
+      <p class="hint" style="margin:8px 0 0">${crawlNote(PCAT.crawl)}</p>
+      <div style="margin-top:6px">${scanStatus(scan, changed)}</div>`;
     $$("[data-rmf]").forEach(b => b.onclick = () => { save({fields: (P.fields || []).filter(f => f !== b.dataset.rmf)}); draw2(); });
     $$("[data-rmm]").forEach(b => b.onclick = () => { save({metas: (P.metas || []).filter(m => m !== b.dataset.rmm)}); draw2(); });
     $("#add-field").onchange = e => { if (!e.target.value) return; save({fields: [...(P.fields || []), e.target.value]}); draw2(); };
     $("#meta-add").onclick = () => { const n = $("#meta-name").value.trim(); if (!n) return;
       save({metas: [...(P.metas || []), `${$("#meta-fn").value}("${n.replace(/"/g, "")}")`]}); draw2(); };
-    $("#scan-speed").onchange = e => save({throttle: {preset: e.target.value}});
     $("#scan-btn").onclick = async () => {
       clearTimeout(saveTimer); if (Object.keys(pending).length) { await api(`/api/plans/${id}`, {method: "PUT", body: pending}); pending = {}; }
       await act(() => api(`/api/plans/${id}/scan`, {method: "POST"})); poll();

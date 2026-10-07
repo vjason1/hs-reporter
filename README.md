@@ -60,8 +60,9 @@ A containerized web service for Hammerspace administrators, with two jobs:
 
 ### Both
 
-- **Crawl speed**: pace scans and per-folder reports (commands at once, pause between commands,
-  folder listings per second) and cap `hs` commands server-wide, to protect the cluster.
+- **Settings page** for global configuration: crawl speed (Normal, Gentle, Slowest or Custom)
+  for every report, schedule and scan, server-wide limits such as a cap on `hs` commands at
+  once, and default NFS and SMB mount options. Changes apply without a restart.
 - **Share management**: the container mounts NFS or SMB shares itself, or uses shares already
   mounted on the host; it detects and recovers stale mounts.
 - **A console-style GUI** with Hammerspace's look, optional sign-in, and a JSON API for
@@ -116,7 +117,7 @@ On a Mac, see [Running on a Mac](docs/troubleshooting.md#running-on-a-mac) first
 | [User guide](docs/user-guide.md) | Reports, the designer, editing HammerScript, results, exports, schedules |
 | [Objective planning](docs/objective-planning.md) | Scans, conditions, the placement model, space by target, warnings, commands |
 | [Shares and mounting](docs/shares.md) | NFS and SMB options, host-mounted shares, how hstk reaches the cluster |
-| [Configuration](docs/configuration.md) | Environment variables, sign-in, crawl speed, data and backups |
+| [Configuration](docs/configuration.md) | The Settings page (crawl speed, limits, mount defaults), environment variables, sign-in, data |
 | [API](docs/api.md) | The JSON API behind the GUI, with examples |
 | [Troubleshooting](docs/troubleshooting.md) | Mount errors, stale file handles, running on a Mac |
 | [Development](docs/development.md) | Project layout, running locally and tests without a cluster |

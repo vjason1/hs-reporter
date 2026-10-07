@@ -64,25 +64,47 @@ def test_schedules(client, share):
     assert s["next_run"] and s["definition_name"]
 
 
+def test_settings_api(client):
+    r = client.get("/api/settings").json()
+    assert r["values"]["crawl_preset"] == "normal" and r["crawl"]["concurrency"] == 4
+    assert set(r["crawl_presets"]) == {"normal", "gentle", "slowest"}
+    bad = client.put("/api/settings", json={"max_hs_processes": 0})
+    assert bad.status_code == 422 and "between 1 and 32" in bad.json()["detail"]
+    r = client.put("/api/settings", json={"crawl_preset": "gentle", "nfs_options": "vers=4.2"}).json()
+    assert r["crawl"]["pause"] == 1.0
+    assert client.get("/api/catalog").json()["mount_defaults"]["nfs"] == "vers=4.2"   # used for new mounts
+    assert client.get("/api/plan-catalog").json()["crawl"]["preset"] == "gentle"
+    r = client.post("/api/settings/reset").json()
+    assert r["values"]["crawl_preset"] == "normal" and r["values"]["nfs_options"] == "vers=3,nolock"
+
+
 def test_pause_between_commands(client, share):
     import time
     # 4 folders (one level), one at a time, 0.3s between commands: at least 3 pauses
-    t0 = time.time()
-    _, r = run_preset(client, share, "folder_usage",
-                      throttle={"preset": "custom", "concurrency": 1, "pause": 0.3, "list_rate": 0})
-    assert r["status"] == "done" and len(r["view"]["rows"]) == 4
-    assert r["throttle"]["pause"] == 0.3
-    assert time.time() - t0 >= 0.9
+    client.put("/api/settings", json={"crawl_preset": "custom", "crawl_concurrency": 1,
+                                      "crawl_pause": 0.3, "crawl_list_rate": 0})
+    try:
+        t0 = time.time()
+        _, r = run_preset(client, share, "folder_usage")
+        assert r["status"] == "done" and len(r["view"]["rows"]) == 4
+        assert r["throttle"]["pause"] == 0.3
+        assert time.time() - t0 >= 0.9
+    finally:
+        client.post("/api/settings/reset")
 
 
 def test_paced_folder_listing(client, share):
     import time
     # A full walk lists 5 folders (/proj, a, a/a1, b, empty); at 5 per second that's >= 0.8s
-    t0 = time.time()
-    _, r = run_preset(client, share, "dir_walk",
-                      throttle={"preset": "custom", "concurrency": 4, "pause": 0, "list_rate": 5})
-    assert r["status"] == "done" and len(r["view"]["rows"]) == 5
-    assert time.time() - t0 >= 0.8
+    client.put("/api/settings", json={"crawl_preset": "custom", "crawl_concurrency": 4,
+                                      "crawl_pause": 0, "crawl_list_rate": 5})
+    try:
+        t0 = time.time()
+        _, r = run_preset(client, share, "dir_walk")
+        assert r["status"] == "done" and len(r["view"]["rows"]) == 5
+        assert time.time() - t0 >= 0.8
+    finally:
+        client.post("/api/settings/reset")
 
 
 def test_missing_hs_fails_the_run_clearly(client, share, monkeypatch):

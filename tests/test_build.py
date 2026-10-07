@@ -44,15 +44,21 @@ def test_expression_override_and_unit_scale():
     assert "SPACE_USED/bytes" in b["generated_expression"]
 
 
-def test_crawl_speed_presets_and_bounds():
-    base = preset("folder_usage")
-    assert reports.build({**base, "throttle": {"preset": "slowest"}})["throttle"] == \
-        {"preset": "slowest", "concurrency": 1, "pause": 5.0, "list_rate": 5}
-    custom = reports.build({**base, "throttle": {"preset": "custom", "concurrency": 2, "pause": 0.5, "list_rate": 10}})
-    assert custom["throttle"]["concurrency"] == 2 and custom["throttle"]["pause"] == 0.5
-    for bad in ({"concurrency": 0}, {"concurrency": 99}, {"pause": -1}, {"list_rate": "fast"}):
-        with pytest.raises(reports.DefinitionError):
-            reports.build({**base, "throttle": {"preset": "custom", **bad}})
+def test_crawl_speed_is_global(tmp_path):
+    from app import settings
+    try:
+        settings.update({"crawl_preset": "slowest"})
+        assert settings.crawl() == {"preset": "slowest", "concurrency": 1, "pause": 5.0, "list_rate": 5.0}
+        assert reports.build(preset("folder_usage"))["throttle"]["preset"] == "slowest"   # every report
+        settings.update({"crawl_preset": "custom", "crawl_concurrency": 2, "crawl_pause": 0.5, "crawl_list_rate": 10})
+        assert settings.crawl() == {"preset": "custom", "concurrency": 2, "pause": 0.5, "list_rate": 10.0}
+        for bad in ({"crawl_concurrency": 0}, {"crawl_concurrency": 99}, {"crawl_pause": -1},
+                    {"crawl_list_rate": "fast"}, {"crawl_preset": "turbo"}, {"nfs_options": "vers=3, nolock"}):
+            with pytest.raises(settings.SettingsError):
+                settings.update(bad)
+    finally:
+        settings.reset()
+    assert settings.crawl()["preset"] == "normal"
 
 
 def test_fnmatch_and_ternary():
@@ -73,3 +79,44 @@ def test_fnmatch_and_ternary():
         assert ox.Condition(text).evaluate(item, 0) is want or bool(ox.Condition(text).evaluate(item, 0)) == want, text
     assert "quoted pattern" in ox.check("FNMATCH(NAME, '*.log')?TRUE")["error"]
     assert "NAME or PATH" in ox.check("FNMATCH('*.log', SIZE)?TRUE")["error"]
+
+
+def test_limiter_follows_settings_without_restart():
+    import asyncio
+    import time
+    from app import settings
+
+    async def scenario():
+        lim = settings.Limiter("max_hs_processes")
+        settings.update({"max_hs_processes": 1})
+        await lim.__aenter__()                      # first slot taken
+        waiter = asyncio.create_task(lim.__aenter__())
+        await asyncio.sleep(0.3)
+        assert not waiter.done()                    # limit 1: the second waits
+        t0 = time.time()
+        settings.update({"max_hs_processes": 2})    # raised on the Settings page
+        await asyncio.wait_for(waiter, 3)
+        assert time.time() - t0 < 2.5 and lim.active == 2
+
+    try:
+        asyncio.run(scenario())
+    finally:
+        settings.reset()
+
+
+def test_settings_store_only_changes(monkeypatch):
+    from app import settings
+    try:
+        settings.update({"max_folders": 2000, "run_timeout": 600})   # 2000 is the default
+        import json
+        assert json.loads(settings.PATH.read_text()) == {"run_timeout": 600}
+        monkeypatch.setenv("HSR_MAX_FOLDERS", "500")                  # env still sets unchanged values
+        assert settings.get()["max_folders"] == 500 and settings.get()["run_timeout"] == 600
+        msg = ""
+        try:
+            settings.update({"max_hs_processes": 99})
+        except settings.SettingsError as e:
+            msg = str(e)
+        assert msg == "hs commands at once, across everything must be between 1 and 32"
+    finally:
+        settings.reset()

@@ -1,34 +1,93 @@
 # Configuration
 
-Settings are environment variables, set in `docker-compose.yml`.
+There are two kinds of configuration:
+
+- **The Settings page** (gear icon in the left rail) holds the global settings for reporting
+  and objective planning: crawl speed, limits and mount defaults. Changes apply right away,
+  without a restart.
+- **Environment variables** in `docker-compose.yml` set things the container needs at start
+  (sign-in, time zone, paths), and the initial values of the Settings page.
+
+## Settings page
+
+![Settings page](screenshots/settings.png)
+
+### Crawl speed
+
+Paces the `hs` commands and folder listings the reporter sends, for every report, schedule
+and objective-planning scan:
+
+| Speed | hs commands at once | Pause between commands | Folder listings per second |
+|---|---|---|---|
+| **Normal** | 4 | none | not limited |
+| **Gentle** | 1 | 1 s | 20 |
+| **Slowest** | 1 | 5 s | 5 |
+| **Custom** | 1–16 | 0–3600 s | 0 (no limit) to 1000 |
+
+Choosing **Custom** starts from the values of the speed that was selected. Where pacing
+helps:
+
+- **Per-folder reports** list folders over the mount and send one `hs sum` per folder.
+  Slower speeds spread that over more time, with fewer commands at once and gaps between them.
+- **Objective-planning scans** walk the folder and, when the recursive evaluation isn't
+  available, gather metadata in batches of files; both are paced.
+- **Reports on several folders** run one folder at a time, with the pause between them.
+- **A single `hs sum`** is one operation that the cluster carries out itself; it can't be
+  slowed from outside. To split a large scan into smaller pieces, break it down by folder.
+
+The report designer and plan pages show the speed in effect, with a link to this page.
+
+### Limits
+
+| Setting | Default | Range | Purpose |
+|---|---|---|---|
+| hs commands at once, across everything | 4 | 1–32 | Hard cap for all reports, schedules and scans together, whatever the crawl speed asks for |
+| Reports and scans at once | 2 | 1–16 | Others wait in a queue |
+| Timeout per hs command | 3600 s | 30–86400 | A command running longer is stopped |
+| Output kept per hs command | 50 MB | 1–2048 | Output beyond this is cut off and marked truncated |
+| Most folders per per-folder report | 2000 | 1–200000 | Deeper folders are skipped, with a note |
+| Most entries per objective-planning scan | 1000000 | 1000–50000000 | Files and folders a scan records |
+| Files per hs eval call when gathering file by file | 100 | 1–1000 | Batch size for a scan's per-file fallback |
+
+Changing a limit also releases or holds back work already queued, within a second.
+
+### Mount defaults
+
+The NFS (`vers=3,nolock`) and SMB (`vers=3.0,noserverino,cache=none,actimeo=0`) options used
+when a share's own mount options are blank, the next time it's mounted. See
+[Shares and mounting](shares.md) for why these defaults.
+
+### How settings are stored
+
+Settings changed on the page are saved in `/data/settings.json`, which holds only the values
+that differ from the defaults. **Reset to defaults** removes it. Anything not changed on the
+page follows the environment variables below, so they still work as before.
+
+## Environment variables
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `HSR_USER`, `HSR_PASSWORD` | unset | Sign-in for the GUI and API (HTTP Basic). Unset turns sign-in off |
 | `TZ` | `UTC` | Time zone for schedules |
-| `HSR_NFS_OPTIONS` | `vers=3,nolock` | Default NFS mount options |
-| `HSR_SMB_OPTIONS` | `vers=3.0,noserverino,cache=none,actimeo=0` | Default SMB mount options |
-| `HSR_MAX_CONCURRENT` | `2` | Reports allowed to run at once; others queue |
-| `HSR_MAX_HS_PROCESSES` | `4` | `hs` commands allowed at once across all reports |
-| `HSR_FOLDER_CONCURRENCY` | `4` | `hs` commands at once for the **Normal** crawl speed |
-| `HSR_COMMAND_PAUSE` | `0` | Seconds between `hs` commands for the **Normal** crawl speed |
-| `HSR_LIST_RATE` | `0` | Folder listings per second for the **Normal** crawl speed (0 = no limit) |
-| `HSR_MAX_FOLDERS` | `2000` | Most folders one per-folder report scans |
-| `HSR_RUN_TIMEOUT` | `3600` | Seconds before an `hs` command is stopped |
-| `HSR_MAX_OUTPUT_MB` | `50` | Most output kept per `hs` command |
-| `HSR_DATA_DIR` | `/data` | Where shares, reports, schedules, results and exports are stored |
+| `HSR_DATA_DIR` | `/data` | Where shares, reports, plans, schedules, results, exports and settings are stored |
 | `HSR_MOUNT_ROOT` | `/mnt/hs` | Where the container mounts NFS and SMB shares |
 | `HSR_LOCAL_ROOT` | `/mnt/external` | The only place "Already mounted" shares may point |
 | `HSR_HS_BIN` | `hs` | The hstk command |
-| `HSR_PLAN_MAX_FILES` | `1000000` | Most entries an objective-planning scan records |
-| `HSR_PLAN_BATCH` | `100` | Files per `hs eval` call when a scan gathers metadata file by file |
 
-## Protecting the cluster
+Initial values for the Settings page (used until changed there):
 
-To make the service gentler for everyone, lower `HSR_MAX_HS_PROCESSES` (for example to `1`)
-and `HSR_MAX_CONCURRENT`, and give **Normal** a pause or listing limit with
-`HSR_COMMAND_PAUSE` and `HSR_LIST_RATE`. Individual reports can go slower still with their
-crawl speed setting (see the [user guide](user-guide.md#crawl-speed)).
+| Variable | Setting |
+|---|---|
+| `HSR_CRAWL_SPEED` | Crawl speed: `normal`, `gentle`, `slowest` or `custom` |
+| `HSR_FOLDER_CONCURRENCY`, `HSR_COMMAND_PAUSE`, `HSR_LIST_RATE` | Custom crawl speed values; setting any of them starts with Custom selected |
+| `HSR_MAX_HS_PROCESSES` | hs commands at once, across everything |
+| `HSR_MAX_CONCURRENT` | Reports and scans at once |
+| `HSR_RUN_TIMEOUT` | Timeout per hs command (seconds) |
+| `HSR_MAX_OUTPUT_MB` | Output kept per hs command |
+| `HSR_MAX_FOLDERS` | Most folders per per-folder report |
+| `HSR_PLAN_MAX_FILES` | Most entries per objective-planning scan |
+| `HSR_PLAN_BATCH` | Files per hs eval call when gathering file by file |
+| `HSR_NFS_OPTIONS`, `HSR_SMB_OPTIONS` | Mount defaults |
 
 ## Sign-in
 
@@ -63,6 +122,8 @@ Everything the service keeps is under `/data` (the `hsr-data` volume):
 | `shares.json` | Share definitions, including SMB passwords (file mode 0600) |
 | `creds/` | SMB credentials files (0600) |
 | `definitions.json` | Saved reports |
+| `plans.json`, `plans/` | Objective plans and their scans |
+| `settings.json` | Settings changed on the Settings page |
 | `schedules.json` | Schedules |
 | `runs/` | One file per result, including the raw `hs` output |
 | `exports/` | Scheduled CSV exports and history files |

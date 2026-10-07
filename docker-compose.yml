@@ -10,7 +10,8 @@ services:
       TZ: "America/New_York"          # schedules run in this time zone
       HSR_USER: "admin"               # remove both to disable sign-in
       HSR_PASSWORD: "change-me"
-      HSR_MAX_CONCURRENT: "2"         # reports allowed to run at once
+      # Initial values for the Settings page; once changed there, the page's values are used.
+      HSR_MAX_CONCURRENT: "2"         # reports and scans at once
       HSR_MAX_HS_PROCESSES: "4"       # hs commands at once across all reports (lower to protect the cluster)
       HSR_RUN_TIMEOUT: "3600"         # seconds before a run is killed
       HSR_MAX_OUTPUT_MB: "50"         # cap on captured hs output per path

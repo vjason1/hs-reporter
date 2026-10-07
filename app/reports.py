@@ -16,15 +16,14 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import hsparse, shares, store
+from . import hsparse, settings, shares, store
 
 HS_BIN = os.environ.get("HSR_HS_BIN", "hs")
-RUN_TIMEOUT = int(os.environ.get("HSR_RUN_TIMEOUT", "3600"))
-MAX_OUTPUT = int(os.environ.get("HSR_MAX_OUTPUT_MB", "50")) * 1024 * 1024
-MAX_CONCURRENT = int(os.environ.get("HSR_MAX_CONCURRENT", "2"))
+# Timeouts, limits and crawl speed are global settings (app/settings.py, the Settings page).
 EXPORT_DIR = store.DATA_DIR / "exports"
 
-_sem: asyncio.Semaphore | None = None
+_sem = settings.Limiter("max_concurrent")         # reports at once
+_hs_slots = settings.Limiter("max_hs_processes")  # hs commands at once, across everything
 
 # Display/export size units. Decimal, matching Hammerspace's KBYTES/MBYTES.
 DISPLAY_UNITS = {"auto": None, "bytes": 1, "kb": 10**3, "mb": 10**6, "gb": 10**9, "tb": 10**12}
@@ -62,43 +61,13 @@ METRICS = {
                    "numeric": False, "unit": "files"},
 }
 FOLDER_DEPTHS = (1, 2, 3, 4, 5, "all")
-MAX_FOLDERS = int(os.environ.get("HSR_MAX_FOLDERS", "2000"))
-FOLDER_CONCURRENCY = int(os.environ.get("HSR_FOLDER_CONCURRENCY", "4"))
-
-# Crawl speed. A single hs sum is one server-side operation the reporter can't slow down;
-# what it controls is how many hs commands it sends, how fast, and how fast it lists folders.
-COMMAND_PAUSE = float(os.environ.get("HSR_COMMAND_PAUSE", "0"))      # seconds between hs commands
-LIST_RATE = float(os.environ.get("HSR_LIST_RATE", "0"))              # folder listings per second, 0 = no limit
-MAX_HS_PROCESSES = int(os.environ.get("HSR_MAX_HS_PROCESSES", "4"))  # hs commands at once, all reports
-THROTTLE_PRESETS = {
-    "normal":  {"label": "Normal", "concurrency": FOLDER_CONCURRENCY, "pause": COMMAND_PAUSE, "list_rate": LIST_RATE},
-    "gentle":  {"label": "Gentle", "concurrency": 1, "pause": 1.0, "list_rate": 20},
-    "slowest": {"label": "Slowest", "concurrency": 1, "pause": 5.0, "list_rate": 5},
-}
-_hs_slots: asyncio.Semaphore | None = None
 
 
-def throttle_for(defn: dict) -> dict:
-    """The crawl-speed settings for a report: a preset, or custom values within safe bounds."""
-    t = defn.get("throttle") or {}
-    preset = t.get("preset") or "normal"
-    if preset in THROTTLE_PRESETS:
-        base = THROTTLE_PRESETS[preset]
-        return {"preset": preset, "concurrency": base["concurrency"], "pause": base["pause"],
-                "list_rate": base["list_rate"]}
-    try:
-        c = int(t.get("concurrency", 1))
-        p = float(t.get("pause", 0))
-        r = float(t.get("list_rate", 0))
-    except (TypeError, ValueError):
-        raise DefinitionError("Crawl speed values must be numbers")
-    if not 1 <= c <= 16:
-        raise DefinitionError("hs commands at once must be between 1 and 16")
-    if not 0 <= p <= 3600:
-        raise DefinitionError("The pause must be between 0 and 3600 seconds")
-    if not 0 <= r <= 1000:
-        raise DefinitionError("Folder listings per second must be between 0 (no limit) and 1000")
-    return {"preset": "custom", "concurrency": c, "pause": p, "list_rate": r}
+def throttle_for(defn: dict | None = None) -> dict:
+    """The crawl speed in effect. It's a global setting; the argument is kept for callers."""
+    return settings.crawl()
+
+
 TOP_N_CHOICES = (10, 100)
 
 # Per-file fields for hs eval listings, returned as a tuple {F1,F2,...}
@@ -180,10 +149,10 @@ def catalog() -> dict:
         "top_n_choices": TOP_N_CHOICES, "eval_fields": strip(EVAL_FIELDS),
         "system_queries": {k: {"label": v["label"]} for k, v in SYSTEM_QUERIES.items()},
         "presets": PRESETS,
-        "throttle_presets": {k: {kk: vv for kk, vv in v.items()} for k, v in THROTTLE_PRESETS.items()},
-        "max_hs_processes": MAX_HS_PROCESSES,
+        "crawl": settings.crawl(), "crawl_presets": settings.CRAWL_PRESETS,
+        "max_hs_processes": settings.get()["max_hs_processes"],
         "folder_depths": FOLDER_DEPTHS, "size_units": list(DISPLAY_UNITS),
-        "mount_defaults": {"nfs": shares.NFS_DEFAULT_OPTS, "smb": shares.SMB_DEFAULT_OPTS},
+        "mount_defaults": {"nfs": settings.get()["nfs_options"], "smb": settings.get()["smb_options"]},
     }
 
 
@@ -760,6 +729,8 @@ async def _exec(cmd: list[str], cwd: str) -> dict:
                           "Check HSR_HS_BIN and that hstk is installed in the container."}
     out = bytearray()
     truncated = False
+    max_output = settings.get()["max_output_mb"] * 1024 * 1024
+    timeout = settings.get()["run_timeout"]
 
     async def pump():
         nonlocal truncated
@@ -767,19 +738,19 @@ async def _exec(cmd: list[str], cwd: str) -> dict:
             chunk = await proc.stdout.read(65536)
             if not chunk:
                 break
-            if len(out) < MAX_OUTPUT:
-                out.extend(chunk[: MAX_OUTPUT - len(out)])
+            if len(out) < max_output:
+                out.extend(chunk[: max_output - len(out)])
             else:
                 truncated = True
 
     try:
-        _, err = await asyncio.wait_for(asyncio.gather(pump(), proc.stderr.read()), RUN_TIMEOUT)
+        _, err = await asyncio.wait_for(asyncio.gather(pump(), proc.stderr.read()), timeout)
         await proc.wait()
     except asyncio.TimeoutError:
         proc.kill()
         await proc.wait()
         return {"rc": -1, "stdout": out.decode(errors="replace"),
-                "stderr": f"Timed out after {RUN_TIMEOUT}s", "truncated": truncated}
+                "stderr": f"Timed out after {timeout}s (Settings: timeout per hs command)", "truncated": truncated}
     return {"rc": proc.returncode, "stdout": out.decode(errors="replace"),
             "stderr": err.decode(errors="replace")[-20000:], "truncated": truncated}
 
@@ -835,9 +806,6 @@ def _expand_folders(root: Path, depth, include_hidden: bool, limit: int,
 
 
 async def _run_hs(cmd: list[str], full: Path, share: dict) -> dict:
-    global _hs_slots
-    if _hs_slots is None:
-        _hs_slots = asyncio.Semaphore(MAX_HS_PROCESSES)
     async with _hs_slots:  # server-wide cap, whatever each report asks for
         return await _run_hs_unlimited(cmd, full, share)
 
@@ -866,9 +834,6 @@ async def execute(run: dict, export: bool = False) -> dict:
 
 
 async def _execute(run: dict, export: bool = False) -> dict:
-    global _sem
-    if _sem is None:
-        _sem = asyncio.Semaphore(MAX_CONCURRENT)
     defn = run["definition"]
     notes = []
     try:
@@ -908,11 +873,13 @@ async def _execute(run: dict, export: bool = False) -> dict:
                     store.runs.put(run)
 
             for p, full in starts:
+                max_folders = settings.get()["max_folders"]
                 folders, cut = await asyncio.to_thread(
-                    _expand_folders, full, pf["depth"], pf["include_hidden"], MAX_FOLDERS - len(targets),
+                    _expand_folders, full, pf["depth"], pf["include_hidden"], max_folders - len(targets),
                     th["list_rate"], on_progress)
                 if cut:
-                    notes.append(f"Stopped at {MAX_FOLDERS} folders (HSR_MAX_FOLDERS); deeper folders were skipped.")
+                    notes.append(f"Stopped at {max_folders} folders (Settings: most folders per report); "
+                                 "deeper folders were skipped.")
                 for f in folders:
                     rel = "/" + str(f.resolve().relative_to(root)) if f.resolve() != root else "/"
                     targets.append((p, f, rel.replace("//", "/")))

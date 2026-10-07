@@ -32,7 +32,8 @@ hs eval -r -e '{DPATH,SIZE,SPACE_USED,MODIFY_AGE,GET_TAG("project")}' /mnt/hs/<s
 It first tries one recursive evaluation (`-r`, a single gateway call for the whole tree). Any
 files that call doesn't return are gathered with batched per-file calls
 (`hs eval -e ... file1 file2 ...`, read using the `##### path` headers hstk prints). The scan
-status shows which method was used. The crawl speed setting paces both the folder walk and
+status shows which method was used. The global crawl speed
+([Settings](configuration.md#crawl-speed)) paces both the folder walk and
 the per-file calls.
 
 **Fields offered** are the ones most used in objective conditions: sizes (`SIZE`,

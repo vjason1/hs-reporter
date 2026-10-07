@@ -78,30 +78,9 @@ any extra HammerScript condition (for example `OWNER!="root"`). **Include non-fi
 
 ### Crawl speed
 
-To protect the cluster from load, each report has a crawl speed:
-
-| Setting | hs commands at once | Pause between commands | Folder listings per second |
-|---|---|---|---|
-| **Normal** | 4 | none | not limited |
-| **Gentle** | 1 | 1 s | 20 |
-| **Slowest** | 1 | 5 s | 5 |
-| **Custom** | 1–16 | 0–3600 s | 0 (no limit) to 1000 |
-
-What these control:
-
-- **Per-folder reports** list folders over the mount (one directory listing per folder) and
-  then send one `hs sum` per folder. Slower settings spread that work over more time, with
-  fewer commands at once and gaps between them. While a report runs, its page shows the
-  folders found so far, then how many have been scanned.
-- **Reports on several folders** run one folder at a time, with the pause between them.
-- **A single `hs sum`** is one operation on the cluster, which walks the tree itself; it
-  can't be slowed down from outside. To split a large scan into smaller pieces, break it
-  down by folder and use a slower speed. Note that per-folder totals include everything
-  below each folder, so a full directory walk does more total work than one summary of the
-  same tree. It's spread out rather than reduced.
-
-Whatever each report asks for, the server runs at most `HSR_MAX_HS_PROCESSES` (default 4)
-`hs` commands at once across all reports, and at most `HSR_MAX_CONCURRENT` reports at once.
+How fast reports send `hs` commands is a global setting, on the
+[Settings page](configuration.md#crawl-speed), and applies to every report, schedule and
+objective-planning scan. The designer shows the speed in effect, with a link to change it.
 Schedules are another way to protect the cluster: run heavy reports outside busy hours.
 
 ### Output fields

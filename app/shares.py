@@ -13,21 +13,15 @@ import os
 import re
 from pathlib import Path
 
-from . import store
+from . import settings, store
 
 MOUNT_ROOT = Path(os.environ.get("HSR_MOUNT_ROOT", "/mnt/hs"))
 LOCAL_ROOT = Path(os.environ.get("HSR_LOCAL_ROOT", "/mnt/external"))
 CRED_DIR = store.DATA_DIR / "creds"
-# NFSv3: Hammerspace limits NFS 4.2 to approved Linux client kernels, which the container's
-# kernel (e.g. the Docker Desktop/Colima VM) may not be. hstk's gateway works over v3.
-# nolock: the container doesn't run rpc.statd, and reporting never needs locks.
-# Don't add actimeo=0 or noac: without attribute caching, reading the gateway's
-# results over NFSv3 fails with ESTALE.
-NFS_DEFAULT_OPTS = os.environ.get("HSR_NFS_OPTIONS", "vers=3,nolock")
-# noserverino: hstk's gateway file changes server-side ID between opens, which the
-# cifs client otherwise rejects as ESTALE. cache=none/actimeo=0: don't serve the
-# gateway's results or attributes from the client cache.
-SMB_DEFAULT_OPTS = os.environ.get("HSR_SMB_OPTIONS", "vers=3.0,noserverino,cache=none,actimeo=0")
+# Default mount options are global settings (Settings page): NFS "vers=3,nolock" (Hammerspace
+# limits NFS 4.2 to approved client kernels; nolock because the container runs no rpc.statd;
+# keep attribute caching on), SMB "vers=3.0,noserverino,cache=none,actimeo=0" (noserverino is
+# required: hstk's gateway file changes server-side ID between opens).
 
 
 class ShareError(Exception):
@@ -130,7 +124,7 @@ async def mount(share: dict) -> dict:
     mp.mkdir(parents=True, exist_ok=True)
 
     if share["kind"] == "nfs":
-        opts = share.get("options") or NFS_DEFAULT_OPTS
+        opts = share.get("options") or settings.get()["nfs_options"]
         is_v3 = re.search(r"(^|,)(nfs)?vers=3(,|$)", opts)
         if is_v3 and not re.search(r"(^|,)(no)?lock(,|$)", opts):
             opts += ",nolock"  # no rpc.statd in the container
@@ -145,7 +139,7 @@ async def mount(share: dict) -> dict:
             lines.append(f"domain={share['domain']}")
         cred.write_text("\n".join(lines) + "\n")
         os.chmod(cred, 0o600)
-        user_opts = share.get("options") or SMB_DEFAULT_OPTS
+        user_opts = share.get("options") or settings.get()["smb_options"]
         # hstk's gateway file gets a new server-side ID between its write-open and
         # read-open; with server inode numbers the cifs client rejects the second
         # open as ESTALE. noserverino skips that check. Honor an explicit "serverino".

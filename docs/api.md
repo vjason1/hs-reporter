@@ -42,13 +42,11 @@ A report design, for example capacity per owner and volume for one folder, shown
   "sum": {"group_by": ["owner", "group", "volume"], "metrics": ["file_count", "space_used"], "top_n": 10},
   "filters": {"access_age_days": 30},
   "folders": {"enabled": false},
-  "display": {"size_unit": "gb", "sort_by": "Space used"},
-  "throttle": {"preset": "custom", "concurrency": 1, "pause": 2, "list_rate": 10}
+  "display": {"size_unit": "gb", "sort_by": "Space used"}
 }
 ```
 
-`mode` is `sum`, `eval` or `custom`. `throttle.preset` is `normal`, `gentle`, `slowest` or
-`custom` (with `concurrency` 1–16, `pause` in seconds, `list_rate` in folder listings per second). To run a saved report once with a hand-edited expression:
+`mode` is `sum`, `eval` or `custom`. Crawl speed is a global setting (see Settings below).
 
 ```bash
 curl -u admin:pw -X POST localhost:8080/api/definitions/$ID/run -H 'content-type: application/json' \
@@ -86,7 +84,7 @@ curl -u admin:pw "localhost:8080/api/runs/$RUN/export?format=analysis&unit=gb&de
 |---|---|
 | `GET /api/plan-catalog` | Fields offered for conditions, with types |
 | `GET /api/plans` / `POST /api/plans` | List or create (`name`, `share_id`, `root`) |
-| `GET/PUT/DELETE /api/plans/{id}` | Read, change (`fields`, `metas`, `rows`, `settings`, `throttle`, `cluster_share`) or delete |
+| `GET/PUT/DELETE /api/plans/{id}` | Read, change (`fields`, `metas`, `rows`, `settings`, `cluster_share`) or delete |
 | `POST /api/plans/{id}/scan` | Start a scan; progress is in the plan's `scan` |
 | `POST /api/plans/{id}/cluster` | Load a CLI export: `{"text": "..."}`; the kind is detected |
 | `POST /api/plans/{id}/check` | Check a condition: `{"condition": "...", "scope": {...}}` → errors or match count |
@@ -96,6 +94,23 @@ curl -u admin:pw "localhost:8080/api/runs/$RUN/export?format=analysis&unit=gb&de
 
 A row: `{"objective": "place-on-object-volumes", "scope": {"type": "folder", "path": "/projects"},
 "condition": "MODIFY_AGE>90*DAYS"}`. Scope types are `share`, `folder` and `file` (with `name`).
+
+## Settings
+
+| Method and path | Purpose |
+|---|---|
+| `GET /api/settings` | Current values, defaults, crawl speed presets and allowed ranges |
+| `PUT /api/settings` | Change any of them; invalid values are rejected with a message |
+| `POST /api/settings/reset` | Back to the defaults |
+
+```bash
+curl -u admin:pw -X PUT localhost:8080/api/settings -H 'content-type: application/json' \
+  -d '{"crawl_preset":"custom","crawl_concurrency":1,"crawl_pause":2,"crawl_list_rate":10,"max_hs_processes":2}'
+```
+
+Keys: `crawl_preset` (`normal`, `gentle`, `slowest`, `custom`), `crawl_concurrency`,
+`crawl_pause`, `crawl_list_rate`, `max_hs_processes`, `max_concurrent`, `run_timeout`,
+`max_output_mb`, `max_folders`, `plan_max_files`, `plan_batch`, `nfs_options`, `smb_options`.
 
 ## Schedules
 

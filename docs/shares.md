@@ -17,7 +17,7 @@ mount doesn't have the gateway.
 | **Already mounted** | Uses a path you mounted on the Docker host and bound under `/mnt/external` | nothing extra |
 
 Leave a share's **Mount options** blank to use the defaults, set container-wide with
-`HSR_NFS_OPTIONS` and `HSR_SMB_OPTIONS` (see [Configuration](configuration.md)), or enter
+the mount defaults on the [Settings page](configuration.md#mount-defaults), or enter
 options for that share.
 
 **Mount when the service starts** remounts the share after a restart.

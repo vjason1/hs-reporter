@@ -10,7 +10,7 @@ from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import clusterinfo, objexpr, objplan, reports, scheduler, shares, store
+from . import clusterinfo, objexpr, objplan, reports, scheduler, settings, shares, store
 
 STATIC = Path(__file__).parent / "static"
 AUTH_USER = os.environ.get("HSR_USER")
@@ -194,7 +194,7 @@ def browse_share(sid: str, path: str = "/"):
 
 DEF_FIELDS = ("name", "description", "share_id", "paths", "mode", "sum", "eval", "filters",
               "custom_expression", "custom_columns", "custom_verb", "nonfiles", "display", "export",
-              "folders", "expression_override", "throttle")
+              "folders", "expression_override")
 
 
 def _clean_def(body: dict) -> dict:
@@ -461,9 +461,39 @@ def get_export(folder: str, name: str):
     return FileResponse(p, filename=name, media_type="text/csv")
 
 
+# ---------------------------------------------------------------- settings
+
+
+
+def _settings_view():
+    return {"values": settings.get(), "defaults": settings.defaults(), "crawl": settings.crawl(),
+            "crawl_presets": settings.CRAWL_PRESETS,
+            "limits": {k: {"min": v[1], "max": v[2], "label": v[3]} for k, v in settings.SPEC.items()}}
+
+
+@app.get("/api/settings")
+def get_settings():
+    return _settings_view()
+
+
+@app.put("/api/settings")
+def put_settings(body: dict = Body(...)):
+    try:
+        settings.update(body)
+    except settings.SettingsError as e:
+        raise HTTPException(422, str(e))
+    return _settings_view()
+
+
+@app.post("/api/settings/reset")
+def reset_settings():
+    settings.reset()
+    return _settings_view()
+
+
 # ------------------------------------------------------- objective planning
 
-PLAN_FIELDS = ("name", "share_id", "root", "fields", "metas", "rows", "settings", "throttle", "cluster_share")
+PLAN_FIELDS = ("name", "share_id", "root", "fields", "metas", "rows", "settings", "cluster_share")
 
 
 def _plan(pid):
@@ -487,7 +517,7 @@ def plan_catalog():
     return {"fields": {k: {"kind": v[0], "label": v[1]} for k, v in objexpr.FIELDS.items()},
             "walk_fields": sorted(objexpr.WALK_FIELDS), "required": objexpr.REQUIRED_FIELDS,
             "meta_funcs": sorted(objexpr.META_FUNCS), "defaults": objplan.DEFAULT_SETTINGS,
-            "throttle_presets": reports.THROTTLE_PRESETS}
+            "crawl": settings.crawl()}
 
 
 @app.get("/api/plans")

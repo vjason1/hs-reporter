@@ -27,12 +27,10 @@ import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import clusterinfo, objexpr, reports, shares, store
+from . import clusterinfo, objexpr, reports, settings, shares, store
 from .hsvalue import Time, Typed, parse_stream
 
 PLAN_DIR = store.DATA_DIR / "plans"
-MAX_FILES = int(os.environ.get("HSR_PLAN_MAX_FILES", "1000000"))
-BATCH = int(os.environ.get("HSR_PLAN_BATCH", "100"))
 BLOCK = 4096
 plans = store.Collection("plans")
 
@@ -217,7 +215,8 @@ async def scan(plan: dict) -> dict:
     root = shares.resolve_in_share(share, plan.get("root") or "/")
     if not root.is_dir():
         raise PlanError(f"{plan.get('root')} isn't a folder on {share['name']}")
-    th = reports.throttle_for(plan)
+    th = settings.crawl()
+    max_files, batch = settings.get()["plan_max_files"], settings.get()["plan_batch"]
     fields = [f for f in dict.fromkeys(objexpr.REQUIRED_FIELDS + list(plan.get("fields") or []))
               if f in objexpr.FIELDS and f not in objexpr.WALK_FIELDS]
     metas = list(dict.fromkeys(plan.get("metas") or []))
@@ -242,7 +241,7 @@ async def scan(plan: dict) -> dict:
             progress["t"] = time.time()
             save(found=n)
 
-    entries, cut = await asyncio.to_thread(_walk, root, th["list_rate"], MAX_FILES, walked)
+    entries, cut = await asyncio.to_thread(_walk, root, th["list_rate"], max_files, walked)
     files = [e for e in entries if not e["d"]]
     save(phase="gathering", files=len(files), folders=len(entries) - len(files), truncated=cut, done=0)
     by_path = {e["p"]: e for e in files}
@@ -269,7 +268,7 @@ async def scan(plan: dict) -> dict:
     missing = [e["p"] for e in files if e["p"] not in values]
     if missing:
         st["method"] = "recursive + per-file" if values else "per-file"
-        batches = [missing[i:i + BATCH] for i in range(0, len(missing), BATCH)]
+        batches = [missing[i:i + batch] for i in range(0, len(missing), batch)]
         sem = asyncio.Semaphore(th["concurrency"])
         done = {"n": len(values), "t": time.time()}
 
@@ -325,7 +324,7 @@ async def scan(plan: dict) -> dict:
     os.replace(tmp, p)
     got = sum(1 for e in files if e["p"] in values)
     status = "done" if got == len(files) else ("partial" if got else ("done" if not files else "failed"))
-    save(status=status, phase=None, finished=store.now(), scanned_at=store.now(), done=got,
+    save(status=status, phase=None, crawl=th, finished=store.now(), scanned_at=store.now(), done=got,
          gathered=got, bytes=total, error_samples=samples,
          error=None if status != "failed" else ("hs returned no metadata. " + (samples[0] if samples else "")))
     return plan
