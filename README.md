@@ -62,7 +62,8 @@ A containerized web service for Hammerspace administrators, with two jobs:
 
 - **Settings page** for global configuration: crawl speed (Normal, Gentle, Slowest or Custom)
   for every report, schedule and scan, server-wide limits such as a cap on `hs` commands at
-  once, and default NFS and SMB mount options. Changes apply without a restart.
+  once, default NFS and SMB mount options, and the sign-in password. Changes apply without a
+  restart.
 - **Share management**: import shares from the cluster's `share-list` output (NFS, SMB or
   both), or add them one by one. The container mounts NFS or SMB shares itself, or uses shares
   already mounted on the host, and detects and recovers stale mounts.

@@ -1192,7 +1192,7 @@ function crawlNote(c, maxHs) {
 
 // ---------------------------------------------------------------- settings
 async function renderSettings() {
-  let S = await api("/api/settings");
+  let [S, A] = await Promise.all([api("/api/settings"), api("/api/auth")]);
   let draft = {...S.values};
   const L = S.limits;
   const field = (key, unit, step = 1, label) => `<div><label class="f" for="st-${key}">${esc(label || L[key].label)}</label>
@@ -1203,7 +1203,7 @@ async function renderSettings() {
     const shown = cp === "custom" ? {concurrency: draft.crawl_concurrency, pause: draft.crawl_pause, list_rate: draft.crawl_list_rate} : P[cp];
     const dirty = JSON.stringify(draft) !== JSON.stringify(S.values);
     view.innerHTML = `
-    <header class="page"><div><h1>Settings</h1><p class="sub">Global settings for reporting and objective planning. Changes apply to new hs commands right away; runs already going finish with the settings they started with.</p></div>
+    <header class="page"><div><h1>Settings</h1><p class="sub">Global settings for reporting and objective planning. Changes apply to new hs commands right away; runs already going finish with the settings they started with. Sign-in changes are saved with their own button.</p></div>
       <div class="row"><button id="st-reset">Reset to defaults</button><button class="primary" id="st-save" ${dirty ? "" : "disabled"}>${dirty ? "Save settings" : "Saved"}</button></div></header>
     <div class="stack">
       <section class="panel stack"><h2>Crawl speed</h2>
@@ -1218,6 +1218,28 @@ async function renderSettings() {
           ${field("max_output_mb", "MB")}${field("max_folders", "")}${field("plan_max_files", "")}${field("plan_batch", "")}
         </div>
         <p class="hint" style="margin:0">The cap on hs commands applies across all reports, schedules and scans together, whatever the crawl speed asks for. Reports and scans beyond the limit wait in a queue.</p>
+      </section>
+      <section class="panel stack" id="st-auth"><h2>Sign-in</h2>
+        ${A.enabled ? `
+          <p style="margin:0">Signed in as <b>${esc(A.username)}</b>. ${A.source === "settings" ? "The password was set on this page." : "The password comes from HSR_PASSWORD in docker-compose.yml; once changed here, the new one is used instead."}</p>
+          <form id="pw-form" class="grid2" style="grid-template-columns:repeat(3,1fr) auto;align-items:end" autocomplete="on">
+            <input type="text" name="username" value="${esc(A.username)}" autocomplete="username" hidden>
+            <div><label class="f" for="pw-cur">Current password</label><input type="password" id="pw-cur" autocomplete="current-password" required></div>
+            <div><label class="f" for="pw-new">New password</label><input type="password" id="pw-new" autocomplete="new-password" minlength="${A.min_length}" required></div>
+            <div><label class="f" for="pw-conf">Confirm new password</label><input type="password" id="pw-conf" autocomplete="new-password" required></div>
+            <button class="primary" type="submit">Change password</button>
+          </form>
+          <p class="hint" style="margin:0">At least ${A.min_length} characters. After the change, your browser asks you to sign in again with the new password. Lost it? See <a href="#" id="pw-lost">how to reset it</a>.</p>
+          <p class="hint" id="pw-lost-text" style="margin:0" hidden>Delete the saved password with <code>docker exec hs-reporter rm /data/auth.json</code>; sign-in then uses HSR_USER and HSR_PASSWORD from docker-compose.yml again.</p>`
+        : `
+          <p style="margin:0"><b>Sign-in is off:</b> anyone who can reach this page can use it. Turn it on with a username and password, or set HSR_USER and HSR_PASSWORD in docker-compose.yml.</p>
+          <form id="pw-enable" class="grid2" style="grid-template-columns:repeat(3,1fr) auto;align-items:end">
+            <div><label class="f" for="en-user">Username</label><input type="text" id="en-user" autocomplete="username" required></div>
+            <div><label class="f" for="en-pass">Password</label><input type="password" id="en-pass" autocomplete="new-password" minlength="${A.min_length}" required></div>
+            <div><label class="f" for="en-conf">Confirm password</label><input type="password" id="en-conf" autocomplete="new-password" required></div>
+            <button class="primary" type="submit">Turn on sign-in</button>
+          </form>
+          <p class="hint" style="margin:0">At least ${A.min_length} characters. Your browser asks you to sign in right after.</p>`}
       </section>
       <section class="panel stack"><h2>Mount defaults</h2>
         <div class="grid2">
@@ -1242,6 +1264,22 @@ async function renderSettings() {
       draft[k] = inp.type === "number" ? (inp.value === "" ? "" : +inp.value) : inp.value;
       const d = JSON.stringify(draft) !== JSON.stringify(S.values);
       $("#st-save").disabled = !d; $("#st-save").textContent = d ? "Save settings" : "Saved";
+    });
+    $("#pw-lost") && ($("#pw-lost").onclick = e => { e.preventDefault(); $("#pw-lost-text").hidden = false; });
+    const signInAgain = msg => { toast(msg); setTimeout(() => location.reload(), 1800); };
+    $("#pw-form") && ($("#pw-form").onsubmit = async e => {
+      e.preventDefault();
+      try {
+        await api("/api/auth/password", {method: "POST", body: {current: $("#pw-cur").value, new: $("#pw-new").value, confirm: $("#pw-conf").value}});
+        signInAgain("Password changed. Sign in again with the new password.");
+      } catch (err) { toast(err.message, true); }
+    });
+    $("#pw-enable") && ($("#pw-enable").onsubmit = async e => {
+      e.preventDefault();
+      try {
+        await api("/api/auth/enable", {method: "POST", body: {username: $("#en-user").value, password: $("#en-pass").value, confirm: $("#en-conf").value}});
+        signInAgain("Sign-in is on. Sign in with the username and password you just set.");
+      } catch (err) { toast(err.message, true); }
     });
     $("#st-save").onclick = async () => {
       try { S = await api("/api/settings", {method: "PUT", body: draft}); draft = {...S.values}; CAT = null; PCAT = null; toast("Settings saved"); draw(); }

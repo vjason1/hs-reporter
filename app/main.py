@@ -1,9 +1,7 @@
 import asyncio
-import base64
 import re
 import json
 import os
-import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -11,11 +9,9 @@ from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import clusterinfo, objexpr, objplan, reports, scheduler, settings, shares, store
+from . import auth, clusterinfo, objexpr, objplan, reports, scheduler, settings, shares, store
 
 STATIC = Path(__file__).parent / "static"
-AUTH_USER = os.environ.get("HSR_USER")
-AUTH_PASS = os.environ.get("HSR_PASSWORD")
 _tasks: set[asyncio.Task] = set()
 
 
@@ -38,23 +34,14 @@ async def lifespan(app: FastAPI):
     scheduler.scheduler.shutdown(wait=False)
 
 
-def _authorized(header: str | None) -> bool:
-    if not header or not header.lower().startswith("basic "):
-        return False
-    try:
-        user, _, pw = base64.b64decode(header[6:]).decode().partition(":")
-    except (ValueError, UnicodeDecodeError):
-        return False
-    return secrets.compare_digest(user, AUTH_USER) and secrets.compare_digest(pw, AUTH_PASS or "")
-
-
 app = FastAPI(title="Hammerspace Reporter", lifespan=lifespan)
 
 
 @app.middleware("http")
 async def basic_auth(request: Request, call_next):
     """Covers the API and the static GUI alike; /api/health stays open for probes."""
-    if AUTH_USER and request.url.path != "/api/health" and not _authorized(request.headers.get("authorization")):
+    if request.url.path != "/api/health" and auth.config()["enabled"] and \
+            not await asyncio.to_thread(auth.check_header, request.headers.get("authorization")):
         return Response("Sign in required", status_code=401,
                         headers={"WWW-Authenticate": 'Basic realm="Hammerspace Reporter"'})
     return await call_next(request)
@@ -543,6 +530,27 @@ def put_settings(body: dict = Body(...)):
     except settings.SettingsError as e:
         raise HTTPException(422, str(e))
     return _settings_view()
+
+
+@app.get("/api/auth")
+def get_auth():
+    return {**auth.config(), "min_length": auth.MIN_LENGTH}
+
+
+@app.post("/api/auth/password")
+def change_password(body: dict = Body(...)):
+    try:
+        return auth.change_password(body.get("current"), body.get("new"), body.get("confirm"))
+    except auth.AuthError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/auth/enable")
+def enable_sign_in(body: dict = Body(...)):
+    try:
+        return auth.enable(body.get("username"), body.get("password"), body.get("confirm"))
+    except auth.AuthError as e:
+        raise HTTPException(422, str(e))
 
 
 @app.post("/api/settings/reset")

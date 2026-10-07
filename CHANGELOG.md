@@ -2,6 +2,9 @@
 
 ## 1.2.0
 
+- **Change the sign-in password** on the Settings page (current password, new password twice),
+  or turn sign-in on there if it's off. Stored as a salted PBKDF2 hash in `/data/auth.json`;
+  deleting it goes back to `HSR_USER` / `HSR_PASSWORD`.
 - **Import shares from the cluster**: paste or upload `share-list` output, enter the cluster's
   IP or FQDN, choose NFS, SMB or both, and tick the shares to add (the root share is left
   out; existing shares are skipped). Shares whose exports only allow privileged ports are

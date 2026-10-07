@@ -3,8 +3,8 @@
 There are two kinds of configuration:
 
 - **The Settings page** (gear icon in the left rail) holds the global settings for reporting
-  and objective planning: crawl speed, limits and mount defaults. Changes apply right away,
-  without a restart.
+  and objective planning: crawl speed, limits and mount defaults, and the sign-in password.
+  Changes apply right away, without a restart.
 - **Environment variables** in `docker-compose.yml` set things the container needs at start
   (sign-in, time zone, paths), and the initial values of the Settings page.
 
@@ -67,7 +67,7 @@ page follows the environment variables below, so they still work as before.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `HSR_USER`, `HSR_PASSWORD` | unset | Sign-in for the GUI and API (HTTP Basic). Unset turns sign-in off |
+| `HSR_USER`, `HSR_PASSWORD` | unset | Sign-in for the GUI and API (HTTP Basic). Unset turns sign-in off. A password changed on the Settings page takes precedence |
 | `TZ` | `UTC` | Time zone for schedules |
 | `HSR_DATA_DIR` | `/data` | Where shares, reports, plans, schedules, results, exports and settings are stored |
 | `HSR_MOUNT_ROOT` | `/mnt/hs` | Where the container mounts NFS and SMB shares |
@@ -91,9 +91,28 @@ Initial values for the Settings page (used until changed there):
 
 ## Sign-in
 
-With `HSR_USER` and `HSR_PASSWORD` set, the browser asks for them, and API calls need HTTP
-Basic credentials. `/api/health` stays open for health checks. Put the service behind HTTPS
-(for example a reverse proxy) if it's reachable beyond a trusted network.
+With sign-in on, the browser asks for a username and password, and API calls need HTTP Basic
+credentials. `/api/health` stays open for health checks. Put the service behind HTTPS (for
+example a reverse proxy) if it's reachable beyond a trusted network: HTTP Basic sends the
+password with every request.
+
+The username and password start as `HSR_USER` and `HSR_PASSWORD` in `docker-compose.yml`.
+Under **Settings → Sign-in**:
+
+- **Change password**: enter the current password and the new one twice (at least 8
+  characters). The new password replaces `HSR_PASSWORD` from then on, and your browser asks
+  you to sign in again.
+- **Turn on sign-in**: if `HSR_USER` isn't set, choose a username and password to turn it on.
+
+Passwords set on the page are saved in `/data/auth.json` as a salted PBKDF2-SHA256 hash, never
+as the password itself, in a file only the service can read.
+
+**Lost the password?** Delete the saved one, and sign-in goes back to `HSR_USER` and
+`HSR_PASSWORD` from the compose file:
+
+```bash
+docker exec hs-reporter rm /data/auth.json
+```
 
 ## hstk version
 
@@ -124,6 +143,7 @@ Everything the service keeps is under `/data` (the `hsr-data` volume):
 | `definitions.json` | Saved reports |
 | `plans.json`, `plans/` | Objective plans and their scans |
 | `settings.json` | Settings changed on the Settings page |
+| `auth.json` | Sign-in username and password hash, if set on the Settings page (0600) |
 | `schedules.json` | Schedules |
 | `runs/` | One file per result, including the raw `hs` output |
 | `exports/` | Scheduled CSV exports and history files |

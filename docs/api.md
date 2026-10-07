@@ -114,6 +114,14 @@ Keys: `crawl_preset` (`normal`, `gentle`, `slowest`, `custom`), `crawl_concurren
 `crawl_pause`, `crawl_list_rate`, `max_hs_processes`, `max_concurrent`, `run_timeout`,
 `max_output_mb`, `max_folders`, `plan_max_files`, `plan_batch`, `nfs_options`, `smb_options`.
 
+## Sign-in
+
+| Method and path | Purpose |
+|---|---|
+| `GET /api/auth` | Whether sign-in is on, the username, and where the password comes from |
+| `POST /api/auth/password` | `{"current", "new", "confirm"}`: change the password |
+| `POST /api/auth/enable` | `{"username", "password", "confirm"}`: turn sign-in on when it's off |
+
 ## Schedules
 
 | Method and path | Purpose |
