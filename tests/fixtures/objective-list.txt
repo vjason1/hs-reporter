@@ -1,0 +1,421 @@
+total 63
+ID:                      5e4d9e93-69e7-44e0-bfb6-e520b000c4cb
+Name:                    access-based-enumeration
+Internal ID:             536870953
+Priority:                MEDIUM
+Description:             Access-based enumeration limits what users can see when browsing files and folders. Requires that the "do-not-cache" objective is also applied.
+
+ID:                      ec1dc918-9800-44ee-bffa-83af67afe38b
+Name:                    acl-compatibility-mode-ignore-chmod
+Internal ID:             536870963
+Priority:                MEDIUM
+Description:             Forces the server to ignore all attempts to change the file access permissions by POSIX commands that would normally set the mode bits. Instead, file access permissions are exclusively determined by the inherited NFSv4 ACLs, as is commonly the case in Windows environments.
+
+ID:                      37f5697b-2616-493b-84cf-2d5ba5a6cc2f
+Name:                    acl-compatibility-mode-non-posix
+Internal ID:             536870962
+Priority:                MEDIUM
+Description:             When applied, disables UNIX/POSIX mode class constraints; the mode behaves like an ACL. Commonly used with Windows or multi-protocol (Windows & UNIX) environments.
+
+ID:                      c1cbd038-aa3e-4da2-809c-51017aadb9a7
+Name:                    availability-1-nine
+Internal ID:             536870922
+Priority:                MEDIUM
+Availability:            90%
+Description:             Data will be placed on a volume with a minimum availability of one nine.
+
+ID:                      65c26631-fc8f-4b2c-9e37-8af2710253eb
+Name:                    availability-3-nines
+Internal ID:             536870923
+Priority:                MEDIUM
+Availability:            99.9%
+Description:             Data will be placed on one or more volumes to meet the desired number of nines.
+
+ID:                      73cc6c8d-fd64-4754-b043-35280da1a60d
+Name:                    availability-5-nines
+Internal ID:             536870924
+Priority:                MEDIUM
+Availability:            99.999%
+Description:             Data will be placed on one or more volumes to meet the desired number of nines.
+
+ID:                      4e6f9d4e-adae-45ac-8c2f-e3aea9e033b2
+Name:                    block-create
+Internal ID:             536870949
+Priority:                MEDIUM
+Description:             Block creating a new file.
+
+ID:                      3b1699db-a4f5-4b20-9604-24f0c9b46206
+Name:                    block-open
+Internal ID:             536870951
+Priority:                MEDIUM
+Description:             Block opening of a file.
+
+ID:                      db009c46-39b1-4058-a69b-612e76924d5f
+Name:                    block-read
+Internal ID:             536870940
+Priority:                MEDIUM
+Description:             Block reading of a file.
+
+ID:                      dc5472e8-4d13-4fa3-b818-9146ea8b5cfb
+Name:                    block-write
+Internal ID:             536870948
+Priority:                MEDIUM
+Description:             Block writing to a file.
+
+ID:                      0686dfde-f4ef-4671-9a70-06a485b76321
+Name:                    confine-to-archive-object-volumes
+Internal ID:             1073741830
+Priority:                MEDIUM
+Confine to:              volume group: archive-object-volumes
+Description:             Restricts placement so data remains only on archive object volumes.
+
+ID:                      44dbbd03-247e-4465-a6c4-00ac7519a59c
+Name:                    confine-to-object-volumes
+Internal ID:             1073741832
+Priority:                MEDIUM
+Confine to:              volume group: object-volumes
+Description:             Restricts placement so data remains only on object volumes.
+
+ID:                      2f5ceb20-fed3-4921-ad5b-5edc2b0f76ca
+Name:                    confine-to-shared-object-volumes
+Internal ID:             1073741831
+Priority:                MEDIUM
+Confine to:              volume group: shared-object-volumes
+Description:             Restricts placement so data remains only on shared object volumes.
+
+ID:                      04183ce8-cddf-4c40-a89b-af638e459d57
+Name:                    delegate-on-open
+Internal ID:             536870915
+Priority:                MEDIUM
+Description:             Controls the delegation behavior. Leaving it on generally improves performance when files are opened and subsequently written to.
+
+ID:                      100f7d47-80a3-43ed-8050-01d2f316a6da
+Name:                    deny-create
+Internal ID:             536870950
+Priority:                MEDIUM
+Description:             Do not allow files to be created.
+
+ID:                      6f427a76-1c6a-4a17-8561-8d87d84d7b74
+Name:                    deny-delete
+Internal ID:             536870937
+Priority:                MEDIUM
+Description:             Do not allow files to be deleted.
+
+ID:                      287e5ec1-cd7b-4684-8018-d57c762c2596
+Name:                    deny-open
+Internal ID:             536870952
+Priority:                MEDIUM
+Description:             Do not allow files to be opened.
+
+ID:                      1fb0e9e4-0a0f-4897-8f5e-b3c15a07cec3
+Name:                    deny-read
+Internal ID:             536870939
+Priority:                MEDIUM
+Description:             Do not allow files to be read.
+
+ID:                      59311994-9e12-4b03-9d65-86ee46deace1
+Name:                    deny-write
+Internal ID:             536870938
+Priority:                MEDIUM
+Description:             Do not allow files to be written to.
+
+ID:                      1f38c6cb-646c-42ab-8083-82c74ff0c9e9
+Name:                    do-not-cache
+Internal ID:             536870954
+Priority:                MEDIUM
+Description:             Do not cache metadata or data on clients. Requires the client to support the NFSv4.2 FATTR4_UNCACHEABLE attribute.
+
+ID:                      932495c4-4f9b-40f4-b088-a0c4dc46c239
+Name:                    do-not-move
+Internal ID:             536870913
+Priority:                MEDIUM
+Do not move:             true
+Description:             Evaluate the objectives but do not move the data.
+
+ID:                      32cb2390-6625-49bf-af5c-2cefad04f03b
+Name:                    durability-10-nines
+Internal ID:             536870921
+Priority:                MEDIUM
+Durability:              99.99999999%
+Description:             Data will be placed on one or more volumes to meet the desired number of nines.
+
+ID:                      01c0855c-bac0-429c-ad84-4a817dcebf90
+Name:                    durability-1-nine
+Internal ID:             536870918
+Priority:                MEDIUM
+Durability:              90%
+Description:             Data will be placed on a volume with a minimum durability of one nine.
+
+ID:                      22d79ff1-2d9d-40d3-8bdc-1cb5e150b5a6
+Name:                    durability-3-nines
+Internal ID:             536870919
+Priority:                MEDIUM
+Durability:              99.9%
+Description:             Data will be placed on one or more volumes to meet the desired number of nines.
+
+ID:                      1c25e038-f32c-4984-87a0-56ff00806f35
+Name:                    durability-5-nines
+Internal ID:             536870920
+Priority:                MEDIUM
+Durability:              99.999%
+Description:             Data will be placed on one or more volumes to meet the desired number of nines.
+
+ID:                      c7388fbd-eb1d-4cf3-92f9-d1a73d22036a
+Name:                    exclude-from-archive-object-volumes
+Internal ID:             1073741828
+Priority:                MEDIUM
+Exclude from:            volume group: archive-object-volumes
+Description:             Prevents data from being placed on archive object volumes.
+
+ID:                      b30b91df-317e-4e51-b616-b5e38f56f63d
+Name:                    exclude-from-object-volumes
+Internal ID:             1073741829
+Priority:                MEDIUM
+Exclude from:            volume group: object-volumes
+Description:             Prevents data from being placed on object volumes.
+
+ID:                      95eb9c85-707b-479e-a42b-3c7302392139
+Name:                    exclude-from-shared-object-volumes
+Internal ID:             1073741826
+Priority:                MEDIUM
+Exclude from:            volume group: shared-object-volumes
+Description:             Prevents data from being placed on shared object volumes.
+
+ID:                      cce6ed1b-1ac8-4b8d-8766-b02d31b341e5
+Name:                    keep-online
+Internal ID:             536870912
+Priority:                MEDIUM
+Do not move:             false
+Allowed online delay:    Online
+Description:             Place data on a volume with zero online delay. This would typically be a file-based volume.
+
+ID:                      387df434-34dc-4965-a128-5a30dc66d1fd
+Name:                    layout-deny-on-error
+Internal ID:             536870917
+Priority:                MEDIUM
+Description:             Controls the layout behavior when errors occur on the file storage.
+
+ID:                      6a045b9e-cb3d-4d06-be22-ad20786a833a
+Name:                    layout-get-on-open
+Internal ID:             536870916
+Priority:                MEDIUM
+Description:             Controls the layout behavior. Leaving it on generally improves performance when files are opened and then written to.
+
+ID:                      4a7c96c7-540f-4ea1-a323-6025bb5974ca
+Name:                    log-xfer-1-day
+Internal ID:             536870932
+Priority:                MEDIUM
+Description:             Preserves a version of files when the site ownership changes. Retention: 1 day.
+
+ID:                      a620fe44-2ca4-4d00-9aaa-e4ac54a76c19
+Name:                    log-xfer-1-hour
+Internal ID:             536870931
+Priority:                MEDIUM
+Description:             Preserves a version of files when the site ownership changes. Retention: 1 hour.
+
+ID:                      a8be88ac-2d87-4976-b0d7-545722a250c8
+Name:                    log-xfer-1-month
+Internal ID:             536870934
+Priority:                MEDIUM
+Description:             Preserves a version of files when the site ownership changes. Retention: 1 month.
+
+ID:                      0abb62f2-8239-4ef3-83f5-920f6d4b761f
+Name:                    log-xfer-1-week
+Internal ID:             536870933
+Priority:                MEDIUM
+Description:             Preserves a version of files when the site ownership changes. Retention: 1 week.
+
+ID:                      5dac45d6-9ff4-49cb-8156-3f1434169d60
+Name:                    no-atime
+Internal ID:             536870926
+Priority:                MEDIUM
+Description:             Removes the need to record access time.
+
+ID:                      a2c3df7a-52a1-4de1-9f93-58a00c23cd06
+Name:                    no-local-io
+Internal ID:             536870977
+Priority:                MEDIUM
+Description:             Disable local IO support by turning off the placement preference for client-local volumes.
+
+ID:                      e31ef172-fb2a-421f-a5d0-9d882db4d505
+Name:                    optimize-for-capacity
+Internal ID:             536870914
+Priority:                MEDIUM
+Optimize for capacity:   true
+Do not move:             false
+Description:             Do not maintain instances on local storage when no objectives require a local copy. The file data will be in the cloud.
+
+ID:                      0d0f92ca-4e7e-4c20-84fd-13ec71b8ef01
+Name:                    performance-fast
+Internal ID:             1
+Priority:                MEDIUM
+Read min throughput:     400000000 B/s
+Read min IOPs:           100000 IOPs
+Read max response time:  1 ms
+Write min throughput:    400000000 B/s
+Write min IOPs:          100000 IOPs
+Write max response time: 1 ms
+Description:             Pre-defined objectives for placing data on different performance volumes.
+
+ID:                      b3875984-5899-4931-aaa6-5f6e73fda503
+Name:                    performance-medium
+Internal ID:             2
+Priority:                MEDIUM
+Read min throughput:     30000000 B/s
+Read min IOPs:           7500 IOPs
+Read max response time:  4 ms
+Write min throughput:    30000000 B/s
+Write min IOPs:          7500 IOPs
+Write max response time: 4 ms
+Description:             Pre-defined objectives for placing data on different performance volumes.
+
+ID:                      9e9e7784-18ec-49dd-a933-14fd8dec1d01
+Name:                    performance-slow
+Internal ID:             3
+Priority:                MEDIUM
+Read min throughput:     400000 B/s
+Read min IOPs:           100 IOPs
+Read max response time:  10 ms
+Write min throughput:    400000 B/s
+Write min IOPs:          100 IOPs
+Write max response time: 10 ms
+Description:             Pre-defined objectives for placing data on different performance volumes.
+
+ID:                      338a9ad0-d231-46c8-baf5-e8ea2f701255
+Name:                    place-on-archive-object-volumes
+Internal ID:             1073741827
+Priority:                MEDIUM
+Place on:                
+                         [volume group: archive-object-volumes]
+Description:             Places data on archive object volumes.
+
+ID:                      451bd3e2-57c8-4cdd-8bb3-8211270645c2
+Name:                    place-on-object-volumes
+Internal ID:             1073741825
+Priority:                MEDIUM
+Place on:                
+                         [volume group: object-volumes]
+Description:             Places data on object volumes.
+
+ID:                      16087657-0972-4f1b-b977-db0efee04550
+Name:                    place-on-shared-object-volumes
+Internal ID:             1073741824
+Priority:                MEDIUM
+Place on:                
+                         [volume group: shared-object-volumes]
+Description:             Places data on shared object volumes.
+
+ID:                      7a206c1e-4cae-4b28-bfb9-23c8b0b3312f
+Name:                    place-on-virus-scanners
+Internal ID:             1073741833
+Priority:                MEDIUM
+Place on:                
+                         [volume group: virus-scanners]
+Description:             Places data on volumes associated with virus scanners.
+
+ID:                      374ee1fb-5fed-47b5-a381-78b21798cf69
+Name:                    reevaluate-slos-10-minutes
+Internal ID:             536870965
+Priority:                MEDIUM
+Description:             Causes objectives to be re-evaluated 10 minutes after the file was last open. This can be used to ensure that objectives get re-evaluated in a timely fashion.
+
+ID:                      0dcb67ea-345d-4b61-b17d-b92a64d40c73
+Name:                    reevaluate-slos-1-day
+Internal ID:             536870967
+Priority:                MEDIUM
+Description:             Causes objectives to be re-evaluated 1 day after the file was last open.
+
+ID:                      ee9591dd-1569-49c8-9fcb-07acc39782d7
+Name:                    reevaluate-slos-1-hour
+Internal ID:             536870966
+Priority:                MEDIUM
+Description:             Causes objectives to be re-evaluated 1 hour after the file was last open.
+
+ID:                      96a58e0b-2772-4f10-89e7-4002d2164db2
+Name:                    reevaluate-slos-1-month
+Internal ID:             536870969
+Priority:                MEDIUM
+Description:             Causes objectives to be re-evaluated 1 month after the file was last open.
+
+ID:                      4cd15f99-5bfd-4a5c-b335-c87a5ee9d8b7
+Name:                    reevaluate-slos-1-week
+Internal ID:             536870968
+Priority:                MEDIUM
+Description:             Causes objectives to be re-evaluated 1 week after the file was last open.
+
+ID:                      0c5d12e1-e9e9-4a54-946e-a2c1fe92298f
+Name:                    reevaluate-slos-1-year
+Internal ID:             536870972
+Priority:                MEDIUM
+Description:             Causes objectives to be re-evaluated 1 year after the file was last open.
+
+ID:                      4ef35498-ee4b-44fc-86e1-e679087a6829
+Name:                    reevaluate-slos-3-months
+Internal ID:             536870970
+Priority:                MEDIUM
+Description:             Causes objectives to be re-evaluated 3 months after the file was last open.
+
+ID:                      00ee5e54-3a7e-4545-8097-7df2a2d48000
+Name:                    reevaluate-slos-6-months
+Internal ID:             536870971
+Priority:                MEDIUM
+Description:             Causes objectives to be re-evaluated 6 months after the file was last open.
+
+ID:                      2e78c2b3-ece5-4afa-ab78-10a0ca5fa27a
+Name:                    undelete-1-day
+Internal ID:             536870928
+Priority:                MEDIUM
+Description:             Retains deleted files for a day.
+
+ID:                      45439de1-994c-479f-b7a5-13593736f2f6
+Name:                    undelete-1-hour
+Internal ID:             536870927
+Priority:                MEDIUM
+Description:             Retains deleted files for an hour.
+
+ID:                      b08e4fbe-b70a-4590-a919-05c7c28a8521
+Name:                    undelete-1-month
+Internal ID:             536870930
+Priority:                MEDIUM
+Description:             Retains deleted files for a month.
+
+ID:                      733ad2a0-f5ae-4764-ab81-3dec1611aaba
+Name:                    undelete-1-week
+Internal ID:             536870929
+Priority:                MEDIUM
+Description:             Retains deleted files for a week.
+
+ID:                      a5a102eb-f0e9-4dc8-b677-2331074668f1
+Name:                    versioning-1-day
+Internal ID:             536870958
+Priority:                MEDIUM
+Description:             Retains files that are overwritten for a day.
+
+ID:                      e18783ad-d329-41d5-8c81-82d72da55db3
+Name:                    versioning-1-hour
+Internal ID:             536870957
+Priority:                MEDIUM
+Description:             Retains files that are overwritten for an hour.
+
+ID:                      2664ffbe-e698-4838-885f-812935923cd3
+Name:                    versioning-1-month
+Internal ID:             536870960
+Priority:                MEDIUM
+Description:             Retains files that are overwritten for a month.
+
+ID:                      23db8a37-7a54-4952-b950-ce62200c033b
+Name:                    versioning-1-week
+Internal ID:             536870959
+Priority:                MEDIUM
+Description:             Retains files that are overwritten for a week.
+
+ID:                      a1e7f857-18b1-47a8-bb4d-dbb2499a077d
+Name:                    virus-scan-operation
+Internal ID:             536870955
+Expression:              IF GET_TAG("skip_virus_scan") THEN {} ELSE IF VIRUS_SCANNER_AVAILABLE AND DATA_ORIGIN_LOCAL AND (IS_BEING_CREATED OR IS_THREAT_UNKNOWN AND SIZE<2*MBYTES AND HAS_ONLINE_INSTANCE) THEN {SLO('place-on-virus-scanners'),SLO('block-open')} ELSE IF IS_THREAT THEN {SLO('place-on-virus-scanners'),SLO('deny-open')} ELSE (IF DATA_ORIGIN_LOCAL OR ROWS(INSTANCES) THEN {SLO('place-on-virus-scanners')})
+Description:             Scan data using available virus scanners.
+
+ID:                      296b6936-19fa-48a8-ade3-e354a3a09e03
+Name:                    worm-operation
+Internal ID:             536870956
+Expression:              IF ATTRIBUTES.WORM_EXPIRE_DATE>NOW OR ATTRIBUTES.LEGAL_HOLD_EXPIRE_DATE>NOW THEN {SLO('deny-delete'),SLO('deny-write')}

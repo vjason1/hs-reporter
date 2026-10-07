@@ -1,0 +1,88 @@
+total 7
+ID:                      12944995-a03e-47e6-922a-2390789cddd2
+Name:                    all
+Internal ID:             1342177281
+State:                   VALID
+Expressions:             
+                         Operator:                NOT_IN
+Volumes:                 
+                         [Type: Storage Volume, ID: a2cbb190-d8b6-4ba8-bb21-58aa0d927e7f, Name: dsx1-1]
+                         [Type: Storage Volume, ID: 2de1bb3f-d768-433c-a18b-953e0bf3db1c, Name: dsx2-1]
+                         [Type: Object Storage Volume, ID: b32553af-2f1b-4b79-ae18-3cff7f591bd3, Name: minio-obj::gfs]
+
+ID:                      2fad23d7-7257-4c4b-ad79-2ee5f068c379
+Name:                    object-volumes
+Internal ID:             1342177282
+State:                   VALID
+Expressions:             
+                         Operator:                IN
+                         Locations:               
+                                                  Type:                    Object Storage Volume
+                                                  ID:                      b32553af-2f1b-4b79-ae18-3cff7f591bd3
+                                                  Name:                    minio-obj::gfs
+Volumes:                 
+                         [Type: Object Storage Volume, ID: b32553af-2f1b-4b79-ae18-3cff7f591bd3, Name: minio-obj::gfs]
+
+ID:                      a1baefe2-22d8-45cc-a80c-c6440a2ab172
+Name:                    shared-object-volumes
+Internal ID:             1342177283
+State:                   VALID
+Expressions:             
+                         Operator:                IN
+                         Locations:               
+                                                  Type:                    Object Storage Volume
+                                                  ID:                      b32553af-2f1b-4b79-ae18-3cff7f591bd3
+                                                  Name:                    minio-obj::gfs
+Volumes:                 
+                         [Type: Object Storage Volume, ID: b32553af-2f1b-4b79-ae18-3cff7f591bd3, Name: minio-obj::gfs]
+
+ID:                      17272356-8959-4c58-8dea-b16abb2ead2e
+Name:                    virus-scanners
+Internal ID:             1342177284
+State:                   VALID
+Expressions:             
+                         Operator:                IN
+
+ID:                      1a629628-d2d3-415d-aec6-eb1366b04859
+Name:                    DSX
+Internal ID:             1342177365
+State:                   VALID
+Expressions:             
+                         Operator:                IN
+                         Locations:               
+                                                  Type:                    Node
+                                                  ID:                      4791a379-6adf-5513-9a61-2f3e2e73f128
+                                                  Name:                    jv-a-dsx-2.asgard.local
+
+                                                  Type:                    Node
+                                                  ID:                      c3d74cbe-8cff-5516-b246-0f93c421c377
+                                                  Name:                    jv-a-dsx-1.asgard.local
+Volumes:                 
+                         [Type: Storage Volume, ID: 2de1bb3f-d768-433c-a18b-953e0bf3db1c, Name: dsx2-1]
+                         [Type: Storage Volume, ID: a2cbb190-d8b6-4ba8-bb21-58aa0d927e7f, Name: dsx1-1]
+
+ID:                      fd6542ea-cd8d-48ef-973a-c02df4f2a99b
+Name:                    Tier1
+Internal ID:             1342177376
+State:                   VALID
+Expressions:             
+                         Operator:                IN
+                         Locations:               
+                                                  Type:                    Storage Volume
+                                                  ID:                      a2cbb190-d8b6-4ba8-bb21-58aa0d927e7f
+                                                  Name:                    dsx1-1
+Volumes:                 
+                         [Type: Storage Volume, ID: a2cbb190-d8b6-4ba8-bb21-58aa0d927e7f, Name: dsx1-1]
+
+ID:                      893d4fe8-9be8-4d3e-982e-5cf7531aea88
+Name:                    Tier2
+Internal ID:             1342177377
+State:                   VALID
+Expressions:             
+                         Operator:                IN
+                         Locations:               
+                                                  Type:                    Storage Volume
+                                                  ID:                      2de1bb3f-d768-433c-a18b-953e0bf3db1c
+                                                  Name:                    dsx2-1
+Volumes:                 
+                         [Type: Storage Volume, ID: 2de1bb3f-d768-433c-a18b-953e0bf3db1c, Name: dsx2-1]

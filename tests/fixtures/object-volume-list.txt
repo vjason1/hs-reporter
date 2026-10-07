@@ -1,0 +1,60 @@
+total 1
+ID:                      b32553af-2f1b-4b79-ae18-3cff7f591bd3
+Name:                    minio-obj::gfs
+Internal ID:             268435549
+State:                   OK
+Node:                    minio-obj
+Oper state:              Up
+Admin state:             Up
+Capabilities:            High threshold:           75%
+                         Low threshold:            60%
+                         Availability:             99.99%
+                         Availability (effective): 99.99%
+                         Availability drop:        Disabled
+                         Durability:               99.9999999%
+                         Durability (effective):   99.9999999%
+                         Online delay:             5 minutes 
+Total capacity:          Unlimited
+Physical used:           0B
+Logical used:            0B
+Naming type:             Hash named
+Compression type:        No compression
+Chunking type:           Fixed-size
+Encrypt using KMS:       None. No Kms Configured.
+Created:                 2026-10-01 16:07:48 UTC
+Modified:                2026-10-01 16:07:48 UTC
+Shared with:             
+                         [ID: 2fe31d2d-7377-4e9f-8ae6-a2f2c331f79f, Internal ID: 4, Name: DK-HS-A, Management address: 10.200.10.175]
+Locations:               
+                         [Type: Object Storage Volume, ID: b32553af-2f1b-4b79-ae18-3cff7f591bd3, Name: minio-obj::gfs]
+                         [Type: Volume Group, ID: 12944995-a03e-47e6-922a-2390789cddd2, Name: all]
+                         [Type: Volume Group, ID: 2fad23d7-7257-4c4b-ad79-2ee5f068c379, Name: object-volumes]
+                         [Type: Volume Group, ID: a1baefe2-22d8-45cc-a80c-c6440a2ab172, Name: shared-object-volumes]
+                         [Type: Node, ID: f9d2c403-91e3-47a8-a8da-ad9970b1d7e1, Name: minio-obj]
+Logical volume:          Type:                    Object Store Logical Volume
+                         ID:                      403e3161-b1ef-4ab6-866e-8a72e00d9a64
+                         Name:                    gfs
+                         Ownership:               Shared
+                         Client certificate:      
+                                                  Version:      3
+                                                  Serial:       633963513 (0x25c983f9)
+                                                  Algorithm:    SHA512withRSA
+                                                  Issuer:       CN=403e3161-b1ef-4ab6-866e-8a72e00d9a64, OU=OBJECT_STORE_LOGICAL_VOLUME, O=Hammerspace
+                                                  Subject:      CN=403e3161-b1ef-4ab6-866e-8a72e00d9a64, OU=OBJECT_STORE_LOGICAL_VOLUME, O=Hammerspace
+                                                  Validity:
+                                                    Not Before: 2026-09-01 16:07:48 UTC
+                                                    Not After:  2126-09-07 16:07:48 UTC
+                                                  Fingerprints:
+                                                    SHA1:       57:2a:be:25:48:b4:fd:6d:b7:43:10:6a:f0:c5:67:a6:cd:2b:83:a3
+                                                    MD5:        1c:79:fa:65:c0:6c:de:23:b7:9e:b5:9:29:fc:69:76
+                                                    CRC32:      0x1619473f
+
+GC status:               Enabled
+GC info:                 Session ID:              1e31fbee-9865-47a4-b7a0-6ded6b4578ba
+                         Task ID:                 47e408bf-448b-4a5a-94a8-870d21fcf688
+                         Freed:                   18.1MB
+                         Completed:               100%
+                         Sites:                   
+                                                  [Site: JV-HS-A (10.200.10.160)]
+                                                  [Site: DK-HS-A (10.200.10.175)]
+                         Status:                  IN PROGRESS

@@ -1,0 +1,88 @@
+total 2
+ID:                      2de1bb3f-d768-433c-a18b-953e0bf3db1c
+Name:                    dsx2-1
+Internal ID:             65
+Discovered addresses:    
+                         [IP: 10.200.10.164/24, Port: 3049, NetId: tcp, NodeNum: 0]
+Effective IPs:           
+                         [IP: 10.200.10.164/24, Port: 3049, NetId: tcp, NodeNum: 0]
+Path:                    /hsvol0
+State:                   OK
+Access type:             Read Write
+Node:                    jv-a-dsx-2.asgard.local
+Oper state:              Up
+Admin state:             Up
+Capacity:                [Total: 42.9GB, Used: 589MB (1%), Free: 42.3GB]
+Capabilities:            Max read IOPs:            14415
+                         Max write IOPs:           15407
+                         Min read latency:         0.281877302 milliseconds
+                         Min write latency:        0.618180337 milliseconds
+                         Max read bandwidth:       1039473 KB/s
+                         Max write bandwidth:      424023 KB/s
+                         NFS read request size:    1.0 MiB
+                         NFS write request size:   1.0 MiB
+                         Tolerable read latency:   100000 milliseconds
+                         Tolerable write latency:  100000 milliseconds
+                         High threshold:           100%
+                         Low threshold:            100%
+                         Availability:             99%
+                         Availability (effective): 99%
+                         Availability drop:        Disabled
+                         Durability:               99.9%
+                         Durability (effective):   99.9%
+                         Clone status:             Functional
+                         Online delay:             Online
+Created:                 2026-05-18 19:51:49 UTC
+Modified:                2026-10-01 17:11:05 UTC
+Root file handle:        0100060090eeb56f8c2147d89dbe044d68b1ff08
+Locations:               
+                         [Type: Volume Group, ID: 1a629628-d2d3-415d-aec6-eb1366b04859, Name: DSX]
+                         [Type: Node, ID: 4791a379-6adf-5513-9a61-2f3e2e73f128, Name: jv-a-dsx-2.asgard.local]
+                         [Type: Storage Volume, ID: 2de1bb3f-d768-433c-a18b-953e0bf3db1c, Name: jv-a-dsx-2.asgard.local::/hsvol0]
+                         [Type: Volume Group, ID: 12944995-a03e-47e6-922a-2390789cddd2, Name: all]
+                         [Type: Volume Group, ID: 893d4fe8-9be8-4d3e-982e-5cf7531aea88, Name: Tier2]
+Random writes:           Enabled
+
+ID:                      a2cbb190-d8b6-4ba8-bb21-58aa0d927e7f
+Name:                    dsx1-1
+Internal ID:             70
+Discovered addresses:    
+                         [IP: 10.200.10.163/24, Port: 3049, NetId: tcp, NodeNum: 0]
+Effective IPs:           
+                         [IP: 10.200.10.163/24, Port: 3049, NetId: tcp, NodeNum: 0]
+Path:                    /hsvol0
+State:                   OK
+Access type:             Read Write
+Node:                    jv-a-dsx-1.asgard.local
+Oper state:              Up
+Admin state:             Up
+Capacity:                [Total: 42.9GB, Used: 575.7MB (1%), Free: 42.3GB]
+Capabilities:            Max read IOPs:            24720
+                         Max write IOPs:           10898
+                         Min read latency:         0.261816169 milliseconds
+                         Min write latency:        0.492953939 milliseconds
+                         Max read bandwidth:       1105256 KB/s
+                         Max write bandwidth:      456239 KB/s
+                         NFS read request size:    1.0 MiB
+                         NFS write request size:   1.0 MiB
+                         Tolerable read latency:   100000 milliseconds
+                         Tolerable write latency:  100000 milliseconds
+                         High threshold:           100%
+                         Low threshold:            100%
+                         Availability:             99%
+                         Availability (effective): 99%
+                         Availability drop:        Disabled
+                         Durability:               99.9%
+                         Durability (effective):   99.9%
+                         Clone status:             Functional
+                         Online delay:             Online
+Created:                 2026-05-18 19:53:42 UTC
+Modified:                2026-10-01 17:10:54 UTC
+Root file handle:        0100060084e86cb7136a47a0a718bf9518db39b3
+Locations:               
+                         [Type: Volume Group, ID: 1a629628-d2d3-415d-aec6-eb1366b04859, Name: DSX]
+                         [Type: Storage Volume, ID: a2cbb190-d8b6-4ba8-bb21-58aa0d927e7f, Name: jv-a-dsx-1.asgard.local::/hsvol0]
+                         [Type: Volume Group, ID: fd6542ea-cd8d-48ef-973a-c02df4f2a99b, Name: Tier1]
+                         [Type: Volume Group, ID: 12944995-a03e-47e6-922a-2390789cddd2, Name: all]
+                         [Type: Node, ID: c3d74cbe-8cff-5516-b246-0f93c421c377, Name: jv-a-dsx-1.asgard.local]
+Random writes:           Enabled

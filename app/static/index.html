@@ -1,0 +1,1546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hammerspace Reporter</title>
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAACr0lEQVR42u2asY6jMBCGDbsPkFRBqQLFVYsOrWhPQqHd3Z7UFLzCpboqz0BBnTxFIh7AhSVfDd1qtc3yBnfFZnWnPWE72APkGEupEtn48/j/Z4ZYXx++/yITHjaZ+EAACAABIAAEgAAQAAJAAAhgouMWeoHQ95jpOSmvgqsAkG3iMkviCGLudFswEyDsa9w8IYRkyXraGhD6XpBt4nKUAELfY5Cn/ycK9Ne4ehcodikbHQDKq4DyivV1FXScBswF8sOJFL6nCozlh1PLBt1GFupZsiYpr8YF4CMKQt+TWhX9WTeUV1HLPITymhW7NJBFQRdbBNWAtlP9ZwN37kz3SnW1xRvny7cfUACeX98cYpEy9L2V6HfLxdwhFikpr1ftczUvT/G9ozPHIC6Q749KViW752pRcLkt9mKD6bZQUmlZYqN6pUYHQNUWsySORJZGeRXkh2N5dQBMnp7qlVIdVt/vBmUnrDpHmy0Gj1v4PCDbxOVn63r38nom24SJEvaSHMM4gLYyN/Q9Qu8q1jUjg8w0jWqAKGnRzcuHqDeMi6CpRkVfwmqbXtRUo0I1CnRt8bZr6IkEKEviKN8fFRsna2GRJLO+83d/Q4hAAagKULFLWbotAjEAtwl9LxIAOkOvhZWeTm5gQwmQiiBSXs+G1hUbUoBkD66q5JDuYkMKkMqDqyo5VBRo2WC+P0a6jYqho0A7D1CxxTFHgTYAE+0qVT+HiAIjmaCJ5GgoRzDSE3x+fXNC32XLxdwRQFgRi5SEWM1yMX/5/DnnBCvZWl17f+D9AFGNDjEurfvBi6E+3wbJGiuDVYOy1NcsALcZHYB3QTTbtITI/2EBKCRHY4JswzzgCWzzlFfMZGcYtCs89j9Ide4HDPWwoyuG/oeBABAAAkAACAABIAAEgAAQwETHbyUJfB3jt52MAAAAAElFTkSuQmCC">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Styled after the Hammerspace management console */
+:root{
+  --navy:#2F4C79; --navy-line:#2E3D57; --navy-active:#358BC9;
+  --paper:#FFFFFF; --panel:#FFFFFF; --ink:#191919; --ink-2:#595959; --ink-3:#8E8E8E;
+  --rule:#D4D4D4; --rule-2:#EBEBEB; --frame:#A9A9A9;
+  --accent:#358BC9; --accent-ink:#FFFFFF; --accent-soft:#E9F3FC; --link:#0075D9;
+  --bar:#60A5ED; --bar-soft:#D3E6FB;
+  --green:#83DDAD; --green-ink:#1E5638; --amber:#8A6400; --amber-soft:#FFDD7E; --red:#E0334F; --red-soft:#FFE3E8; --red-solid:#FF4767;
+  --code-bg:#22344F; --code-ink:#E6EDF6;
+  --tok-key:#8CCBFF; --tok-op:#FFDD7E; --tok-str:#FF9FB0; --tok-num:#83DDAD; --tok-brace:#8FA3BF;
+  --sans:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.5 var(--sans);font-variant-numeric:tabular-nums}
+a{color:var(--link)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+:focus-visible{outline:2px solid var(--navy-active);outline-offset:2px}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:20;height:56px;background:var(--navy);color:#fff;display:flex;align-items:stretch}
+.topbar .logo{display:flex;align-items:center;padding:0 16px 0 14px;text-decoration:none}
+.topbar .logo img{height:26px;width:auto;display:block}
+.topbar .spacer{flex:1}
+.topbar .blk{display:flex;flex-direction:column;justify-content:center;padding:0 16px;border-left:1px solid var(--navy-line);font-size:13px;line-height:1.25;white-space:nowrap}
+.topbar .blk b{font-weight:700;letter-spacing:.02em}
+.topbar .blk small{font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85}
+
+/* layout and icon rail */
+.app{display:grid;grid-template-columns:48px 1fr;min-height:calc(100% - 56px)}
+.app.wide{grid-template-columns:200px 1fr}
+nav.rail{background:var(--navy);position:sticky;top:56px;height:calc(100vh - 56px);display:flex;flex-direction:column;padding:4px 0}
+nav.rail button.ham{all:unset;cursor:pointer;height:40px;display:flex;align-items:center;justify-content:center;color:#fff}
+nav.rail a{height:44px;display:flex;align-items:center;gap:14px;padding:0 14px;color:#fff;text-decoration:none;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden}
+nav.rail a svg,nav.rail button.ham svg{flex:none;width:20px;height:20px}
+nav.rail a span{display:none}
+.app.wide nav.rail a span{display:inline}
+.app.wide nav.rail button.ham{justify-content:flex-start;padding-left:14px}
+nav.rail a:hover{background:rgba(255,255,255,.08)}
+nav.rail a[aria-current=page]{background:var(--navy-active)}
+main{padding:14px 24px 48px;min-width:0}
+
+/* headings */
+header.page{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px;flex-wrap:wrap;min-height:36px}
+h1{font-size:20px;font-weight:600;margin:0;line-height:1.3;color:var(--ink)}
+h2{font-size:14px;margin:0 0 10px;font-weight:600;color:var(--ink-2)}
+h3{font-size:13px;margin:0 0 6px;font-weight:600;color:var(--ink-2)}
+.sub{color:var(--ink-2);margin:2px 0 0;max-width:80ch;font-size:13px}
+
+/* panels: square, thin gray frame, gray title */
+.panel{background:var(--panel);border:1px solid var(--frame);border-radius:0;padding:12px 14px}
+.stack>*+*{margin-top:12px}
+
+/* controls */
+button,.btn{font:inherit;font-weight:600;font-size:13px;border:1px solid var(--rule);background:#fff;color:var(--ink);padding:6px 14px;border-radius:2px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;min-height:32px}
+button:hover,.btn:hover{border-color:var(--ink-3);background:#FAFAFA}
+button.primary,.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover,.btn.primary:hover{background:#2C7AB4;border-color:#2C7AB4}
+button.danger{color:var(--red)}
+button.ghost,.btn.ghost{border-color:transparent;background:transparent;color:var(--link);padding:5px 8px;font-weight:600}
+button.ghost:hover,.btn.ghost:hover{background:var(--accent-soft);border-color:transparent}
+button.ghost.danger{color:var(--red)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+label.f{display:block;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:4px}
+input[type=text],input[type=number],input[type=password],select,textarea{font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--rule);border-radius:2px;padding:5px 9px;width:100%;min-height:32px}
+textarea{font-family:var(--mono);font-size:13px;min-height:90px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:15px;height:15px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hint{font-size:12.5px;color:var(--ink-3);margin-top:4px}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:14px;cursor:pointer;padding:3px 0}
+.check input{margin-top:3px}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:2px 14px}
+
+/* tabs (segmented) */
+.seg{display:inline-flex;border-bottom:1px solid var(--rule);flex-wrap:wrap;gap:4px}
+.seg button{border:0;border-radius:0;background:none;color:var(--ink-2);padding:6px 12px;min-height:0;border-bottom:3px solid transparent;margin-bottom:-1px}
+.seg button:hover{background:none;color:var(--ink)}
+.seg button[aria-pressed=true]{color:var(--link);border-bottom-color:var(--accent)}
+
+/* tables */
+table.data{width:100%;border-collapse:collapse;font-size:14px}
+table.data th{text-align:left;font-weight:600;color:var(--ink-2);font-size:13px;padding:7px 10px;border-bottom:1px solid var(--rule);white-space:nowrap;position:sticky;top:0;background:#fff}
+table.data td{padding:7px 10px;border-bottom:1px solid var(--rule-2);vertical-align:top}
+table.data tbody tr:hover td{background:#F5F9FD}
+table.data tr:last-child td{border-bottom:0}
+table.data td.num,table.data th.num{text-align:right}
+table.data td .row{flex-wrap:nowrap}
+table.data td .mono{white-space:nowrap}
+th.sortable{cursor:pointer}
+th.sortable:hover{color:var(--ink)}
+.scroll{overflow:auto;max-width:100%}
+
+/* status: the console's health colors */
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:2px 10px;border-radius:99px;background:var(--rule-2);color:var(--ink-2);white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--green);color:var(--green-ink)}
+.pill.warn{background:var(--amber-soft);color:#5C4500}
+.pill.bad{background:var(--red-solid);color:#fff}
+.pill.run::before{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.pill.run::before{animation:none}}
+.empty{text-align:center;padding:36px 20px;color:var(--ink-2)}
+.empty p{margin:0 0 14px}
+.bar{position:relative}
+.bar i{position:absolute;inset:4px auto 4px 0;background:var(--bar-soft);border-left:3px solid var(--bar);z-index:0}
+.bar span{position:relative;z-index:1}
+details.top summary{cursor:pointer;color:var(--link);font-size:13px}
+details.top ol{margin:6px 0 0;padding-left:20px;font-size:13px}
+details.top li{white-space:nowrap}
+
+/* designer */
+.designer{display:grid;grid-template-columns:minmax(0,1fr) minmax(330px,420px);gap:16px;align-items:start}
+.sticky{position:sticky;top:70px}
+.query{background:var(--code-bg);color:var(--code-ink);padding:14px 14px 12px;border:1px solid var(--code-bg)}
+.query h3{color:#A9BBD6;font-weight:600}
+.query pre:last-child{margin-bottom:0}
+.query pre{margin:0 0 14px;font:13px/1.6 var(--mono);white-space:pre-wrap;word-break:break-all}
+.query .err{color:#FFB3C0;font:13px var(--sans)}
+.tok-key{color:var(--tok-key)} .tok-op{color:var(--tok-op);font-weight:500} .tok-str{color:var(--tok-str)} .tok-num{color:var(--tok-num)} .tok-br{color:var(--tok-brace)}
+.cmd{font:12px/1.55 var(--mono);color:#B9C8DE;word-break:break-all;margin:0 0 6px}
+.qhead{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.qhead h3{margin:0}
+.qtag{font-size:11px;font-weight:700;background:var(--amber-soft);color:#5C4500;padding:1px 8px;border-radius:99px}
+.qbtn{all:unset;cursor:pointer;color:#8CCBFF;font-size:12.5px;font-weight:600}
+.qbtn:hover{text-decoration:underline}
+.qbtn:focus-visible{outline:2px solid #8CCBFF;outline-offset:2px}
+.qnote{font-size:12px;color:#A9BBD6;margin:6px 0 12px}
+.qnote.err{color:#FFB3C0}
+.query .row button:not(.primary){background:transparent;color:#fff;border-color:rgba(255,255,255,.35)}
+.query .row button:not(.primary):hover{background:rgba(255,255,255,.08)}
+/* editable HammerScript: a transparent textarea over the highlighted text */
+.code-edit{position:relative}
+.code-edit pre,.code-edit textarea{margin:0;padding:8px 10px;font:13px/1.6 var(--mono);white-space:pre-wrap;word-break:break-all;overflow-wrap:anywhere;border:1px solid rgba(255,255,255,.2);border-radius:2px;letter-spacing:normal}
+.code-edit pre{color:var(--code-ink);min-height:44px;background:rgba(0,0,0,.18)}
+.code-edit textarea{position:absolute;inset:0;width:100%;height:100%;min-height:0;background:transparent;color:transparent;caret-color:#fff;resize:none;overflow:hidden}
+.code-edit textarea:focus{outline:none;border-color:var(--navy-active);box-shadow:0 0 0 2px rgba(53,139,201,.4)}
+.code-edit textarea::selection{background:rgba(140,203,255,.35);color:transparent}
+.code-edit .tok-op{font-weight:inherit}
+.code-edit.light pre{background:#F6F7F9;color:var(--ink);border-color:var(--rule)}
+.code-edit.light textarea{caret-color:var(--ink);border-color:var(--rule)}
+.code-edit.light textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.code-edit.light textarea::selection{background:rgba(53,139,201,.25)}
+.code-edit.light .tok-key{color:#0B5CAD}.code-edit.light .tok-op{color:#A35A00}.code-edit.light .tok-str{color:#B0204A}
+.code-edit.light .tok-num{color:#1E7A4C}.code-edit.light .tok-br{color:#6B7A8C}
+.code-edit.bad pre{border-color:var(--red-solid)}
+/* objective planning */
+.steps>section{position:relative}
+.steps h2 .n{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;font-size:12px;align-items:center;justify-content:center;margin-right:8px}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:2px;background:var(--rule-2);color:var(--ink-2);margin-left:4px;text-transform:uppercase;letter-spacing:.02em}
+.badge.place{background:#DCEBFA;color:#0B4F8A}.badge.protect{background:#DFF5E8;color:#1E5638}.badge.limit{background:#FFF1CC;color:#5C4500}.badge.none{background:var(--rule-2);color:var(--ink-3)}
+.orow{border:1px solid var(--rule);padding:12px;background:#FCFCFD}
+.orow+.orow{margin-top:10px}
+.orow .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.orow .num{font-weight:700;color:var(--ink-3);min-width:22px}
+.orow .grid3{display:grid;grid-template-columns:180px 1fr 200px;gap:10px;margin-top:10px}
+.builder{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.builder select,.builder input{width:auto;min-height:28px;padding:3px 7px;font-size:13px}
+.builder button{min-height:28px;padding:3px 10px;font-size:12.5px}
+.status-line{font-size:12.5px;margin-top:4px;color:var(--ink-2)}
+.status-line.ok{color:#1E7A4C}.status-line.bad{color:var(--red)}
+.msgs{margin:8px 0 0;padding:0;list-style:none;font-size:13px}
+.msgs li{padding:2px 0}.msgs li.err{color:var(--red)}.msgs li.warn{color:#8A6400}.msgs li.note{color:var(--ink-3)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{border:1px solid var(--rule);padding:10px 12px}
+.stat b{display:block;font-size:20px;font-weight:600;color:var(--ink)}
+.stat span{font-size:12.5px;color:var(--ink-2)}
+.wlist{list-style:none;margin:0;padding:0}
+.wlist li{border-left:4px solid var(--rule);padding:8px 12px;margin-bottom:8px;background:#FAFAFA;font-size:14px}
+.wlist li.warn{border-color:#E0A000;background:#FFFBEB}.wlist li.error{border-color:var(--red-solid);background:var(--red-soft)}.wlist li.info{border-color:var(--navy-active);background:var(--accent-soft)}
+.upl{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.upl .card{border:1px solid var(--rule);padding:10px 12px}
+.upl .card code{font-size:12px}
+.upl .card.ok{border-left:4px solid var(--green)}
+.pbar{height:8px;background:var(--rule-2);position:relative;min-width:80px}
+.pbar i{position:absolute;inset:0 auto 0 0;background:var(--bar)}
+.pbar.over i{background:var(--red-solid)}
+tr.muted td{color:var(--ink-3)}
+.calc-bar{display:flex;align-items:center;gap:12px;padding:4px 0}
+.calc-bar button{min-height:38px;padding:8px 20px;font-size:14px}
+tr.member td{background:#FAFBFC;font-size:13px}
+tr.member td:first-child{padding-left:30px}
+button.expand{all:unset;cursor:pointer;color:var(--link);font-size:12.5px;font-weight:600;margin-left:8px}
+button.expand:hover{text-decoration:underline}
+.fields{list-style:none;margin:0;padding:0}
+.fields li{display:flex;align-items:center;gap:6px;padding:4px 6px}
+.fields li:hover{background:#F5F9FD}
+.fields li.off .fname{color:var(--ink-3);text-decoration:line-through}
+.fields .fname{flex:1}
+.fields button{padding:2px 7px;min-height:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--accent-soft);border:1px solid #C5DDF2;border-radius:2px;padding:2px 4px 2px 9px;font:13px var(--mono)}
+.chip button{padding:0 6px;border:0;background:none;font-size:15px;line-height:1;min-height:0;color:var(--ink-2)}
+
+/* dialogs and menus */
+dialog{border:1px solid var(--frame);border-radius:0;padding:0;background:#fff;color:var(--ink);width:min(620px,94vw);box-shadow:0 12px 40px rgba(20,32,52,.28);max-height:92vh;overflow:auto}
+dialog::backdrop{background:rgba(30,45,70,.45)}
+dialog form,dialog .body{padding:18px 20px 20px}
+dialog h2{font-size:16px;color:var(--ink)}
+dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin:18px -20px -20px;padding:12px 20px 16px;position:sticky;bottom:-20px;background:#fff;border-top:1px solid var(--rule-2)}
+dialog .scroll td,dialog .scroll th{white-space:nowrap}
+.crumbs{font:13px var(--mono);color:var(--ink-2);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:2px}
+.crumbs button{padding:1px 4px;font:inherit;border:0;background:none;color:var(--link);min-height:0}
+.dirlist{border:1px solid var(--rule);max-height:320px;overflow:auto}
+.dirlist button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--rule-2);border-radius:0;font:13.5px var(--mono);padding:8px 12px;min-height:0}
+.dirlist button:hover{background:var(--accent-soft)}
+details.menu{position:relative}
+details.menu summary{list-style:none}
+details.menu summary::-webkit-details-marker{display:none}
+details.menu summary::after{content:"▾";font-size:11px;margin-left:2px}
+.menu-pop{position:absolute;right:0;top:calc(100% + 4px);z-index:15;width:330px;background:#fff;border:1px solid var(--frame);box-shadow:0 10px 28px rgba(20,32,52,.18);padding:4px 0}
+.menu-pop a{display:block;padding:8px 14px;color:var(--ink);text-decoration:none;font-size:14px}
+.menu-pop a:hover{background:var(--accent-soft)}
+.menu-pop a b{font-weight:600}
+.menu-pop a span{display:block;color:var(--ink-3);font-size:12.5px;margin-top:1px}
+.menu-list{max-height:calc(100vh - 140px);overflow:auto}
+.menu-list a{padding:6px 14px}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:10px 16px;font-size:14px;max-width:420px;z-index:30;box-shadow:0 8px 30px rgba(0,0,0,.25);border-left:4px solid var(--navy-active)}
+.toast.bad{background:#fff;color:var(--red);border:1px solid var(--red-solid);border-left:4px solid var(--red-solid)}
+
+/* misc */
+.meta{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:13px;color:var(--ink-2);align-items:center}
+.meta b{color:var(--ink);font-weight:600}
+pre.raw{background:#F6F7F9;border:1px solid var(--rule-2);padding:12px;font:12px/1.5 var(--mono);max-height:340px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:8px 0 0}
+.errbox{background:var(--red-soft);color:#A3162E;border-left:4px solid var(--red-solid);padding:10px 12px;font-size:14px;white-space:pre-wrap}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.colpick{display:flex;flex-wrap:wrap;gap:4px}
+.colpick button{font-size:12.5px;padding:3px 10px;border-radius:99px;min-height:0;font-weight:600}
+.colpick button[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--link)}
+@media (max-width:1100px){.designer{grid-template-columns:1fr}.sticky{position:static}}
+@media (max-width:760px){
+  .topbar .blk.date{display:none}
+  .app,.app.wide{grid-template-columns:1fr}
+  nav.rail{position:static;height:auto;flex-direction:row;padding:0 4px}
+  nav.rail button.ham{display:none}
+  nav.rail a span{display:inline}
+  main{padding:14px 14px 40px}.grid2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="logo" href="#/reports" aria-label="Hammerspace Reporter home"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAATkAAAAmCAYAAAC/FuwLAAAG+UlEQVR42u1ca46DOAx2q94Lc7I4J8M9GftjW02nS4gd2wFm80lIoxHk4cfnBym3dV1BCQR/MAwMDAwE4KG8nwAgBa1lHmQ3MDDgjftJCA6Cxx4YGBgkdzjwRaQDAwMDbrgJe3IIAEuvNQ21DAwM/MVM7o1lqGVgYKB3JvcmH+y0LutLiK11codn98Zhhz14rmdvvLPOLQU3jMeO9osbf7PRBqPWjJ1kgV9je8uijHVdpReuciyv+7cuEj4PhmsLKHx22XiWlPOTw56WHfmgcixUypoc54aKrjVzS0HG8ahB59K5JGMvHde8BPgfCvdARtsRARwdT7N4CWHihUnOY0+LYxAgR5JbnB3/jCSn1T05j7sY1rso7cyLGyyywEiS0/bksvC+SZBm19LVqx4podDUu22c5Fx+IPx/kCo6pUb5pqD+MypaS962ujTKIrQVpiU5FhIdQv04SHYY42qYnI25T0/DThJ/gehQuT/+8Bc+wMYlxJEc9UY787EgsQmzk5a3q+Rk3H81m0udsiCpbLDzHltsRRJcb4qLGsebd4JvUuwvv8aaX/fMr/HZIMtcWHNWrlmqG49qgT/kOn/IIRsJf9bYQ+sRktnJyHNHRzm6VPUmbnQmpIiSdYJrgV86zEJ5TwWbJqXfoNHmNGuOsDHaIfrS/blXUnM3GAMLHQyN5W+C6/SApsIeozIrbDA+Nuhca5BX0ZtURijYHzeM7SEnUuogCRIOKemkBjlQL5uxHAbOTmvomf1EYiu7yc4Rlo1yyYa5n0a9SgPjmUlOcl9NJ/PGxZ3XTcLnJRk7GdYSRfi/8DAK9AY+B0dn2H/T9Bb2mZ0ElY7QspdvkqrJJQXvVzP384Lla02Xz0J2R5XgzZ3tUjIfFUitxVaz4r5ntGweHxucNhQoib7sZDxcIcwE5ya5vcY0K8nJIqe9CEsG4uOXjaBAJ1iY+yo/2SOFTFLFFqjjuqXlcyrc09u/umT3jx3Dx5dR99p4rZSSRMgaCUX1kagSzSxl4vfankKiiWgvSPeBhbnRsG8JQT4dSAULdpILTporRJfg5xhJpC+R4b7n1540AfmI7FzqyxkA+FFZZM8yUZKlTEbjPVvmx41ySgIdpSAdwUFzY4fxkrLt8EkaSeCU7ETEWzooEbNEN1QJZHu2igpZ9baFDCB78dCz6V/LNp5wTtQMh6Gtqdua4pMh0muJLglL1TPhnRl+X7iXEVTkPYPsgHuCthP+CQDWjUvzKwMJIbGBVE6JO5zrlwdcWQ+fUIa1UnXvf60BJCvHyQ7GioW5UViqXhVZaP8MP+e/JD61BPvV1rpRmDj8KaJ7gLzpT0JHSIJMjBp6C9aeRgafs31nKKFrZWMKDA4lB+DgMrk3WTLID71v2S9B/UVPAv9eHe/YuvRXG5qSlaE/AUp9md8kV9rUNxaB0mslGAoJi4KMVkpyVqJixf8R2ntzuGGE5BwcLHNHlsne42ElcLRm+QT7fbMFfL6GzRXnJyNBaeSBEFt1qWz68fUQGjfJQpI4+3EQS6n6NlxNr4UVhsaVwDQJyhGPSIqCjDSftNzZytIW8DkjVnPK1EgKWwRmXRsq9bIljyfY3ppHB7NfLx6ycJMeDIvwNz7X41GatcqiVLLiQVkxBpfJPUogjW4I5C8uPp9hQ9uCQfZFjyhblWbYk2JN3zJ0t9e7su8hcch8sNCPzuJ6ZyR7GWRkH+spyF6vRHIl4ijZ6fQVWFBo088L26o0IGvuC8djQxgT2H55ICl9vXoeZ3SUljTd62devfeaHILd2bI5FNpp6d4ajjg8OzXaKgr8v+TvNZumXsnDo8FxJOQkdb4r9+ZSIUqTwHCwQaYtASUy2zxy7t572rLTkq72XtAR9D88W8qqZuGzi4D4SoRPoPt5YUhgvCvSdk2pySD/gjBe0BksUUhbFlmykh6ZD3RwWoTtg7Cli5z3hDvOXVrr8uHk735T6iSvGilJ52PhmHs2vcLvntu6Iwep3haNPdwbHQRB9vXV1ozoisgOjnRWMtPq+HlhPWqCEO3IH+Hn51x7wXwO3k8y6kcqi7kii1pCE2bHd6WivzdK8N/mq2RDWsK8QqkaFXVbnZI6ksJfKFUlQYiURCeZJzKLI4fMUZPZtsiC4ecz8V1JTsqsW6+Aa6n51bM5S6kaVbLmA7O7I+c+Qzb31v0NdN9Ru8FxwYAd7sUdWUjIm+HnE+mRRA+3dV1rtS92ErznZi19CKwoGx0MR7JONBgdO8gGDQbPAXNbHLnVHqx2hBvPsIMNgpMt9xqHNp6x+qMbyQH827zrlRFcvcwZGBg4GSSfWupVfgyCGxgYOITkCOLPsuWhioGBgQhIytV3XRz1fX6G+NfoAwMDg+REwCCSGxgYGAjBP+5Gw7MJS/hHAAAAAElFTkSuQmCC" alt="Hammerspace" width="214" height="26"></a>
+  <span class="spacer"></span>
+  <div class="blk"><small>TOOL:</small><b>REPORTER</b></div>
+  <div class="blk date" id="clock" aria-live="off"></div>
+</header>
+<div class="app" id="app">
+  <nav class="rail" aria-label="Main">
+    <button class="ham" id="ham" aria-label="Show menu labels" aria-expanded="false" title="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <a href="#/reports" title="Reports"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 12v6h2v-6H8zm3.5-2v8h2v-8h-2zM15 14v4h2v-4h-2z"/></svg><span>Reports</span></a>
+    <a href="#/runs" title="Results"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 4h18v4H3V4zm0 6h5v4H3v-4zm7 0h11v4H10v-4zM3 16h5v4H3v-4zm7 0h11v4H10v-4z"/></svg><span>Results</span></a>
+    <a href="#/schedules" title="Schedules"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 3a1 1 0 0 1 1 1v5.6l3.7 2.1a1 1 0 1 1-1 1.8l-4.2-2.5A1 1 0 0 1 11 12V6a1 1 0 0 1 1-1z"/></svg><span>Schedules</span></a>
+    <a href="#/plans" title="Objectives"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2zm0 4a6 6 0 1 0 6 6h-2a4 4 0 1 1-4-4V6zm0 4a2 2 0 1 0 2 2h-2v-2zm3-8v3.6l-3.7 3.7 1.4 1.4L16.4 7H20l2-2-3-1-1-3-3 1z"/></svg><span>Objectives</span></a>
+    <a href="#/shares" title="Shares"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v1H2V6zm0 4h20v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8zm13 4.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 0 0-3 0z"/></svg><span>Shares</span></a>
+  </nav>
+  <main id="view" tabindex="-1"></main>
+</div>
+<dialog id="dlg"></dialog>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------- helpers
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const view = $("#view"), dlg = $("#dlg");
+let CAT = null, pollTimer = null;
+
+async function api(path, opts={}) {
+  const init = {method: opts.method || "GET", headers: {}};
+  if (opts.body !== undefined) { init.body = JSON.stringify(opts.body); init.headers["Content-Type"] = "application/json"; }
+  const r = await fetch(path, init);
+  const text = await r.text();
+  let data; try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!r.ok) {
+    let msg = data && data.detail !== undefined ? data.detail : text;
+    if (Array.isArray(msg)) msg = msg.map(d => d.msg).join("; ");
+    throw new Error(msg || `Request failed (${r.status})`);
+  }
+  return data;
+}
+function toast(msg, bad=false) {
+  const t = document.createElement("div");
+  t.className = "toast" + (bad ? " bad" : ""); t.textContent = msg; t.setAttribute("role", "status");
+  document.body.appendChild(t); setTimeout(() => t.remove(), bad ? 6000 : 2800);
+}
+async function act(fn, okMsg) { try { const r = await fn(); if (okMsg) toast(okMsg); return r; } catch (e) { toast(e.message, true); throw e; } }
+const UNITS = ["B","KB","MB","GB","TB","PB"];
+const UNIT_F = {bytes: 1, kb: 1e3, mb: 1e6, gb: 1e9, tb: 1e12};
+const UNIT_L = {bytes: "bytes", kb: "KB", mb: "MB", gb: "GB", tb: "TB"};
+function bytes(n, unit) {
+  if (typeof n !== "number") return esc(n);
+  if (unit && unit !== "auto" && UNIT_F[unit]) {
+    const v = n / UNIT_F[unit];
+    return unit === "bytes" ? n.toLocaleString() : v.toLocaleString(undefined, {maximumFractionDigits: v < 10 ? 3 : 2});
+  }
+  let i = 0, v = n; while (Math.abs(v) >= 1000 && i < UNITS.length-1) { v /= 1000; i++; }
+  return (i ? v.toFixed(v < 10 ? 2 : 1) : v) + " " + UNITS[i];
+}
+const num = n => typeof n === "number" ? n.toLocaleString() : esc(n);
+function when(ts) {
+  if (!ts) return "—";
+  const d = new Date(ts*1000);
+  return d.toLocaleString(undefined, {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"});
+}
+function dur(a, b) { if (!a || !b) return ""; const s = Math.round(b-a); return s < 60 ? `${s}s` : `${Math.floor(s/60)}m ${s%60}s`; }
+function statusPill(s) {
+  const map = {done:["ok","Done"], partial:["warn","Partial"], failed:["bad","Failed"], running:["warn run","Running"], queued:["run","Queued"]};
+  const [cls, label] = map[s] || ["", s || "—"];
+  return `<span class="pill ${cls}">${label}</span>`;
+}
+function highlight(exp) {
+  // Tokenize the raw text, then escape each piece: matching patterns on escaped HTML would
+  // break entities (the 39 in &#39;).
+  const re = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\|::|::|\|\||&&|>=|<=|!=|==|[|?:<>!=])|([{}\[\]()])|(\b\d+(?:\.\d+)?\b(?![A-Za-z_]))|(\b\d*[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\b)/g;
+  let out = "", last = 0, m;
+  while ((m = re.exec(exp))) {
+    out += esc(exp.slice(last, m.index));
+    const t = esc(m[0]);
+    if (m[1]) out += `<span class="tok-str">${t}</span>`;
+    else if (m[2]) out += `<span class="tok-op">${t}</span>`;
+    else if (m[3]) out += `<span class="tok-br">${t}</span>`;
+    else if (m[4]) out += `<span class="tok-num">${t}</span>`;
+    else {
+      const w = m[0];
+      if (/^(AND|OR|NOT|IF|THEN|ELSE)$/.test(w)) out += `<span class="tok-op">${t}</span>`;
+      else if (/^(KEY|VALUE|ROW)$/.test(w)) out += `<span class="tok-br">${t}</span>`;
+      else if (/^\d*[A-Z_][A-Z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/.test(w)) out += `<span class="tok-key">${t}</span>`;
+      else out += t;  // lowercase words such as the bytes in SPACE_USED/bytes
+    }
+    last = re.lastIndex;
+  }
+  return out + esc(exp.slice(last));
+}
+
+// Editable HammerScript field with syntax colors. Single line: hs -e takes one expression.
+function codeEditor(el, {value = "", onInput, onRun, label = "HammerScript expression", light = false} = {}) {
+  el.className = "code-edit" + (light ? " light" : "");
+  el.innerHTML = `<pre aria-hidden="true"></pre><textarea spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="${esc(label)}"></textarea>`;
+  const pre = el.querySelector("pre"), ta = el.querySelector("textarea");
+  const paint = () => { pre.innerHTML = highlight(ta.value) + "\n"; };
+  ta.value = value; paint();
+  ta.addEventListener("input", () => {
+    if (/\n/.test(ta.value)) { const pos = ta.selectionStart; ta.value = ta.value.replace(/\s*\n\s*/g, " "); ta.selectionStart = ta.selectionEnd = Math.min(pos, ta.value.length); }
+    paint(); onInput && onInput(ta.value);
+  });
+  ta.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); if ((e.ctrlKey || e.metaKey) && onRun) onRun(); }
+  });
+  return {
+    get: () => ta.value,
+    set: v => { if (document.activeElement !== ta && ta.value !== v) { ta.value = v; paint(); } },
+    focused: () => document.activeElement === ta,
+  };
+}
+
+function setNav(route) {
+  $$("nav.rail a").forEach(a => a.getAttribute("href") === "#/" + route ? a.setAttribute("aria-current","page") : a.removeAttribute("aria-current"));
+}
+function openDialog(html, onMount, width) {
+  dlg.style.width = width || "";
+  dlg.innerHTML = html; dlg.showModal(); if (onMount) onMount(dlg);
+  $$("[data-close]", dlg).forEach(b => b.onclick = e => { e.preventDefault(); dlg.close(); });
+}
+
+// ---------------------------------------------------------------- router
+const routes = {
+  reports: renderReports, design: renderDesigner, runs: renderRuns, run: renderRun,
+  schedules: renderSchedules, shares: renderShares, plans: renderPlans, plan: renderPlan,
+};
+async function route() {
+  clearTimeout(pollTimer);
+  if (dlg.open) dlg.close();  // a dialog belongs to the page it was opened on
+  const [name, id] = (location.hash.replace(/^#\/?/, "").split("?")[0] || "reports").split("/");
+  setNav(name === "design" ? "reports" : name === "run" ? "runs" : name === "plan" ? "plans" : name);
+  if (!CAT) CAT = await api("/api/catalog");
+  try { await (routes[name] || renderReports)(id); }
+  catch (e) { view.innerHTML = `<div class="errbox">${esc(e.message)}</div>`; }
+}
+window.addEventListener("hashchange", route);
+
+// Top bar date, in the console's style: "Friday, 2 Oct, 9:54 AM EDT"
+function tick() {
+  const d = new Date();
+  const day = d.toLocaleDateString(undefined, {weekday: "long"});
+  const date = d.toLocaleDateString("en-GB", {day: "numeric", month: "short"});
+  const time = d.toLocaleTimeString(undefined, {hour: "numeric", minute: "2-digit", timeZoneName: "short"});
+  $("#clock").textContent = `${day}, ${date}, ${time}`;
+}
+tick(); setInterval(tick, 30000);
+
+// Rail labels toggle, remembered for next time
+const appEl = $("#app"), ham = $("#ham");
+const setWide = on => { appEl.classList.toggle("wide", on); ham.setAttribute("aria-expanded", on); ham.setAttribute("aria-label", on ? "Hide menu labels" : "Show menu labels"); };
+try { setWide(localStorage.getItem("hsr-rail") === "wide"); } catch {}
+ham.onclick = () => { const on = !appEl.classList.contains("wide"); setWide(on); try { localStorage.setItem("hsr-rail", on ? "wide" : "narrow"); } catch {} };
+document.addEventListener("click", e => $$("details.menu[open]").forEach(d => { if (!d.contains(e.target)) d.open = false; }));
+
+// ---------------------------------------------------------------- shares
+async function renderShares() {
+  const list = await api("/api/shares");
+  view.innerHTML = `
+  <header class="page"><div><h1>Shares</h1>
+    <p class="sub">Hammerspace NFS or SMB shares the reports run against. hstk needs a direct mount of a Hammerspace share, not a re-export.</p></div>
+    <button class="primary" id="add">Add share</button></header>
+  <div class="panel">${list.length ? `<div class="scroll"><table class="data">
+    <thead><tr><th>Name</th><th>Connection</th><th>Mounted at</th><th>Status</th><th></th></tr></thead><tbody>
+    ${list.map(s => `<tr>
+      <td><b>${esc(s.name)}</b>${s.auto_mount ? `<div class="hint">Mounts on startup</div>` : ""}</td>
+      <td class="mono">${s.kind === "local" ? "local " + esc(s.local_path) : `${s.kind} ${esc(s.kind === "smb" ? "//" + s.server + "/" + s.export.replace(/^\//,"") : s.server + ":" + s.export)}`}</td>
+      <td class="mono">${esc(s.status.root || "")}</td>
+      <td>${s.status.error ? `<span class="pill bad" title="${esc(s.status.error)}">Error</span>` :
+            s.status.stale ? `<span class="pill bad" title="The server no longer recognizes this mount, usually after sleep, a network change or a failover">Stale</span>` :
+            s.status.mounted ? (s.status.hammerspace ? `<span class="pill ok">Mounted</span>` :
+            `<span class="pill warn" title="The hstk gateway file wasn't found; hs commands will fail unless this is a Hammerspace mount">Mounted, not Hammerspace</span>`) :
+            `<span class="pill">Not mounted</span>`}</td>
+      <td><div class="row" style="justify-content:flex-end">
+        ${s.kind !== "local" ? (s.status.stale ? `<button class="primary" data-remount="${s.id}">Remount</button>` : s.status.mounted ? `<button data-un="${s.id}">Unmount</button>` : `<button data-mount="${s.id}">Mount</button>`) : ""}
+        <button class="ghost" data-edit="${s.id}">Edit</button>
+        <button class="ghost danger" data-del="${s.id}">Delete</button></div></td></tr>`).join("")}
+    </tbody></table></div>` : `<div class="empty"><p>No shares yet. Add a Hammerspace share to start building reports.</p><button class="primary" id="add2">Add share</button></div>`}
+  </div>`;
+  const byId = Object.fromEntries(list.map(s => [s.id, s]));
+  $$("#add,#add2").forEach(b => b.onclick = () => shareDialog());
+  $$("[data-edit]").forEach(b => b.onclick = () => shareDialog(byId[b.dataset.edit]));
+  $$("[data-mount]").forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = "Mounting…";
+    await act(() => api(`/api/shares/${b.dataset.mount}/mount`, {method:"POST"}), "Mounted").finally(renderShares); });
+  $$("[data-remount]").forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = "Remounting…";
+    await act(() => api(`/api/shares/${b.dataset.remount}/remount`, {method:"POST"}), "Remounted").finally(renderShares); });
+  $$("[data-un]").forEach(b => b.onclick = async () => { await act(() => api(`/api/shares/${b.dataset.un}/unmount`, {method:"POST"}), "Unmounted").finally(renderShares); });
+  $$("[data-del]").forEach(b => b.onclick = async () => {
+    if (!confirm(`Delete share "${byId[b.dataset.del].name}"? Reports that use it will stop working.`)) return;
+    await act(() => api(`/api/shares/${b.dataset.del}`, {method:"DELETE"}), "Share deleted"); renderShares(); });
+}
+function shareDialog(s) {
+  s = s || {kind:"nfs", auto_mount:true};
+  openDialog(`<form id="sf"><h2>${s.id ? "Edit share" : "Add share"}</h2><div class="stack">
+    <div><label class="f" for="s-name">Name</label><input type="text" id="s-name" value="${esc(s.name)}" required placeholder="Projects"></div>
+    <div><label class="f">Connection</label><div class="seg" id="s-kind">
+      ${[["nfs","NFS v3"],["smb","SMB"],["local","Already mounted"]].map(([k,l]) => `<button type="button" data-k="${k}" aria-pressed="${s.kind===k}">${l}</button>`).join("")}</div></div>
+    <div id="s-fields"></div>
+    <label class="check"><input type="checkbox" id="s-auto" ${s.auto_mount ? "checked" : ""}> Mount when the service starts</label>
+  </div><div class="actions"><button data-close>Cancel</button><button class="primary" type="submit">${s.id ? "Save share" : "Add share"}</button></div></form>`, d => {
+    let kind = s.kind;
+    const fields = () => {
+      $("#s-fields", d).innerHTML = kind === "local" ? `
+        <label class="f" for="s-local">Path inside the container</label><input type="text" id="s-local" class="mono" value="${esc(s.local_path || "/mnt/external/")}">
+        <div class="hint">Mount the share on the Docker host and bind-mount it under /mnt/external.</div>` : `
+        <div class="grid2"><div><label class="f" for="s-server">Server</label><input type="text" id="s-server" value="${esc(s.server)}" placeholder="anvil.example.com"></div>
+        <div><label class="f" for="s-export">${kind === "smb" ? "Share name" : "Export"}</label><input type="text" id="s-export" class="mono" value="${esc(s.export)}" placeholder="${kind === "smb" ? "projects" : "/projects"}"></div></div>
+        ${kind === "smb" ? `<div class="grid2" style="margin-top:12px"><div><label class="f" for="s-user">Username</label><input type="text" id="s-user" value="${esc(s.username)}" autocomplete="off"></div>
+        <div><label class="f" for="s-pass">Password</label><input type="password" id="s-pass" autocomplete="new-password" placeholder="${s.has_password ? "Unchanged" : ""}"></div></div>
+        <div style="margin-top:12px"><label class="f" for="s-dom">Domain</label><input type="text" id="s-dom" value="${esc(s.domain)}"></div>` : ""}
+        <div style="margin-top:12px"><label class="f" for="s-opts">Mount options</label><input type="text" id="s-opts" class="mono" value="${esc(s.options || "")}" placeholder="${esc(CAT.mount_defaults[kind])}">
+        <div class="hint">${kind === "smb" ? "Leave blank for the default shown. If you set your own, noserverino is still added, since hstk needs it on SMB." : "Leave blank for the default shown. v3 mounts always get nolock. Keep attribute caching on: actimeo=0 or noac make hs fail with stale file handles."}</div></div>`;
+    };
+    fields();
+    $$("#s-kind button", d).forEach(b => b.onclick = () => { kind = b.dataset.k; $$("#s-kind button", d).forEach(x => x.setAttribute("aria-pressed", x === b)); fields(); });
+    $("#sf", d).onsubmit = async e => {
+      e.preventDefault();
+      const v = id => $(id, d)?.value?.trim();
+      const body = {name: v("#s-name"), kind, auto_mount: $("#s-auto", d).checked, server: v("#s-server"), export: v("#s-export"),
+        options: v("#s-opts"), username: v("#s-user"), password: $("#s-pass", d)?.value || "", domain: v("#s-dom"), local_path: v("#s-local")};
+      await act(() => s.id ? api(`/api/shares/${s.id}`, {method:"PUT", body}) : api("/api/shares", {method:"POST", body}), s.id ? "Share saved" : "Share added");
+      dlg.close(); renderShares();
+    };
+  });
+}
+
+// ---------------------------------------------------------------- reports list
+async function renderReports() {
+  const [defs, shares, runs] = await Promise.all([api("/api/definitions"), api("/api/shares"), api("/api/runs?limit=500")]);
+  const shareName = Object.fromEntries(shares.map(s => [s.id, s.name]));
+  const lastRun = {}; runs.forEach(r => { if (r.definition_id && !lastRun[r.definition_id]) lastRun[r.definition_id] = r; });
+  const kind = d => d.mode === "sum" ? "Summary" : d.mode === "eval" ? (d.eval?.source === "system" ? "System query" : "File listing") : "Custom";
+  view.innerHTML = `
+  <header class="page"><div><h1>Reports</h1><p class="sub">Saved report designs. Run one now, or schedule it from the Schedules page.</p></div>
+    ${newReportMenu()}</header>
+  <div class="panel">${defs.length ? `<div class="scroll"><table class="data"><thead><tr><th>Report</th><th>Type</th><th>Share and paths</th><th>Last run</th><th></th></tr></thead><tbody>
+    ${defs.map(d => { const r = lastRun[d.id]; return `<tr>
+      <td><a href="#/design/${d.id}"><b>${esc(d.name)}</b></a>${d.description ? `<div class="hint">${esc(d.description)}</div>` : ""}</td>
+      <td>${kind(d)}</td>
+      <td>${esc(shareName[d.share_id] || "Missing share")} <span class="mono">${(d.paths||[]).map(esc).join(", ")}</span></td>
+      <td>${r ? `<a href="#/run/${r.id}">${statusPill(r.status)}</a> <span class="hint">${when(r.started)}</span>` : `<span class="hint">Never</span>`}</td>
+      <td><div class="row" style="justify-content:flex-end"><button class="primary" data-run="${d.id}">Run</button>
+        <a class="btn ghost" href="#/design/${d.id}">Edit</a><a class="btn ghost" href="#/schedules?new=${d.id}">Schedule</a><button class="ghost danger" data-del="${d.id}">Delete</button></div></td></tr>`; }).join("")}
+  </tbody></table></div>` : `<div class="empty"><p>${shares.length ? "No reports yet. Design one to see capacity by owner, file type, volume and more." : "Add a share first, then design a report against it."}</p>
+    <a class="btn primary" href="${shares.length ? "#/design" : "#/shares"}">${shares.length ? "New report" : "Add a share"}</a></div>`}</div>`;
+  $$("[data-run]").forEach(b => b.onclick = async () => { const r = await act(() => api(`/api/definitions/${b.dataset.run}/run`, {method:"POST"})); location.hash = `#/run/${r.run_id}`; });
+  $$("[data-del]").forEach(b => b.onclick = async () => { if (!confirm("Delete this report? Its past results are kept.")) return;
+    await act(() => api(`/api/definitions/${b.dataset.del}`, {method:"DELETE"}), "Report deleted"); renderReports(); });
+}
+
+function newReportMenu() {
+  return `<details class="menu"><summary class="btn primary">New report</summary><div class="menu-pop menu-list" style="width:360px">
+    ${CAT.presets.map(p => `<a href="#/design?preset=${p.id}">${esc(p.label)}</a>`).join("")}
+    <a href="#/design?preset=__custom">Custom expression</a>
+    <a href="#/design">Blank report</a>
+  </div></details>`;
+}
+
+// ---------------------------------------------------------------- designer
+const BLANK = () => ({name:"", description:"", share_id:"", paths:["/"], mode:"sum",
+  sum:{group_by:["owner"], metrics:["file_count","space_used","top_files"], top_n:10},
+  eval:{source:"fields", fields:["dpath","owner","space_used"], recursive:true, files_only:true, system_query:"storage_volumes"},
+  filters:{}, custom_expression:"", custom_columns:"", custom_verb:"sum", nonfiles:false,
+  folders:{enabled:false, depth:1, include_hidden:false},
+  throttle:{preset:"normal"},
+  display:{fields:[], sort_by:"", sort_desc:true, limit:null, size_unit:"auto"}});
+
+async function renderDesigner(id) {
+  const [shares, existing] = await Promise.all([api("/api/shares"), id ? api(`/api/definitions/${id}`) : null]);
+  const base = BLANK();
+  const D = existing ? {...base, ...clone(existing), sum:{...base.sum, ...(existing.sum||{})}, eval:{...base.eval, ...(existing.eval||{})},
+      filters:{...(existing.filters||{})}, folders:{...base.folders, ...(existing.folders||{})},
+      throttle:{...base.throttle, ...(existing.throttle||{})},
+      display:{...base.display, ...(existing.display||{})}} : base;
+  if (!D.share_id && shares.length) D.share_id = shares[0].id;
+  let uiType = D.mode === "custom" ? "custom" : D.mode === "eval" ? (D.eval.source === "system" ? "system" : "listing") : "summary";
+  let lastPreview = null, previewSeq = 0;
+
+  view.innerHTML = `
+  <header class="page"><div><h1>${existing ? esc(existing.name) : "New report"}</h1><p class="sub">Choose where to look, what to group by and which fields to show. The query panel shows the exact hs command that will run.</p></div>
+    <div class="row"><a class="btn" href="#/reports">Cancel</a><button id="run-now">Run without saving</button><button class="primary" id="save">Save report</button></div></header>
+  <div class="designer">
+    <div class="stack">
+      <section class="panel stack">
+        <div class="grid2"><div><label class="f" for="d-name">Report name</label><input type="text" id="d-name" value="${esc(D.name)}" placeholder="Capacity by owner"></div>
+          <div><label class="f" for="d-preset">Start from</label><select id="d-preset"><option value="">Choose a starting point…</option>
+            ${CAT.presets.map(p => `<option value="${p.id}">${esc(p.label)}</option>`).join("")}
+            <option value="__custom">Custom expression</option></select></div></div>
+        <div><label class="f" for="d-desc">Description</label><input type="text" id="d-desc" value="${esc(D.description)}" placeholder="Optional"></div>
+      </section>
+      <section class="panel stack"><h2>Where</h2>
+        ${shares.length ? `<div><label class="f" for="d-share">Share</label><select id="d-share">${shares.map(s => `<option value="${s.id}" ${s.id===D.share_id?"selected":""}>${esc(s.name)}${s.status.mounted ? "" : " (not mounted)"}</option>`).join("")}</select></div>
+        <div><label class="f" for="d-addpath">Folders to scan</label><div class="chips" id="d-paths" style="margin-bottom:8px"></div>
+          <div class="row" style="flex-wrap:nowrap"><input type="text" id="d-addpath" class="mono" placeholder="/projects/2026" style="flex:1">
+            <button type="button" id="d-addpath-btn">Add</button><button type="button" id="d-browse">Browse…</button></div>
+          <div class="hint">Scan the whole share with /, or one or more subfolders. Each folder is scanned separately; with more than one, results get a Path column.</div></div>` :
+          `<p class="errbox">No shares configured. <a href="#/shares">Add a share</a> first.</p>`}
+      </section>
+      <section class="panel stack"><h2>What</h2>
+        <div class="seg" id="d-type">${[["summary","Summary"],["listing","File listing"],["system","System query"],["custom","Custom expression"]].map(([k,l]) => `<button type="button" data-t="${k}">${l}</button>`).join("")}</div>
+        <div id="d-type-body" class="stack"></div>
+      </section>
+      <section class="panel stack" id="d-filters-panel"><h2>Filters</h2><div id="d-filters"></div></section>
+      <section class="panel stack" id="d-speed-panel"><h2>Crawl speed</h2><div id="d-speed"></div></section>
+    </div>
+    <aside class="sticky stack">
+      <section class="query"><div class="qhead"><h3>HammerScript</h3><span class="qtag" id="q-tag" hidden>Edited</span><span class="spacer"></span>
+          <button class="qbtn" id="q-reset" hidden>Reset to generated</button></div>
+        <div id="q-edit"></div>
+        <p class="qnote" id="q-note" aria-live="polite"></p>
+        <h3>Command</h3><div id="q-cmd" aria-live="polite"></div></section>
+      <section class="panel"><h2>Output fields</h2><p class="hint" style="margin:-4px 0 10px">Tick the columns to show and use the arrows to order them. Applies to results and CSV exports.</p>
+        <ul class="fields" id="q-fields"></ul>
+        <div class="grid2" style="margin-top:14px"><div><label class="f" for="q-sort">Sort by</label><select id="q-sort"></select></div>
+          <div><label class="f" for="q-dir">Order</label><select id="q-dir"><option value="1">Largest first</option><option value="0">Smallest first</option></select></div></div>
+        <div style="margin-top:12px"><label class="f" for="q-unit">Show sizes in</label><select id="q-unit">
+          ${[["auto","Auto (best unit per value)"],["bytes","Bytes"],["kb","KB"],["mb","MB"],["gb","GB"],["tb","TB"]].map(([v,l]) => `<option value="${v}" ${D.display.size_unit===v?"selected":""}>${l}</option>`).join("")}</select>
+          <div class="hint">One unit for every size in the results and CSV downloads. hs always returns exact bytes (SPACE_USED/bytes); 1 KB = 1,000 bytes.</div></div>
+        <div style="margin-top:12px"><label class="f" for="q-limit">Row limit</label><input type="number" id="q-limit" min="1" placeholder="All rows" value="${esc(D.display.limit || "")}"></div>
+      </section>
+    </aside>
+  </div>`;
+
+  // --- static bindings
+  const bindVal = (sel, fn) => { const el = $(sel); if (el) el.addEventListener("input", () => { fn(el.value); refresh(); }); };
+  bindVal("#d-name", v => D.name = v);
+  bindVal("#d-desc", v => D.description = v);
+  bindVal("#d-share", v => { D.share_id = v; });
+  function applyPreset(pid) {
+    if (pid === "__custom") { uiType = "custom"; D.mode = "custom"; drawType(); drawFilters(); refresh(); return; }
+    const p = CAT.presets.find(x => x.id === pid); if (!p) return;
+    D.expression_override = null; editor.set("");
+    D.mode = p.mode; if (p.sum) D.sum = {...D.sum, ...clone(p.sum)}; if (p.eval) D.eval = {...D.eval, ...clone(p.eval)};
+    D.filters = clone(p.filters || {}); D.display.fields = []; D.display.sort_by = "";
+    D.folders = {enabled: false, depth: 1, include_hidden: false, ...clone(p.folders || {})};
+    if (!D.name) { D.name = p.label; $("#d-name").value = p.label; }
+    uiType = p.mode === "sum" ? "summary" : p.eval?.source === "system" ? "system" : "listing";
+    drawType(); drawFilters(); refresh();
+  }
+  $("#d-preset").onchange = e => { applyPreset(e.target.value); e.target.value = ""; };
+  const drawPaths = () => {
+    const el = $("#d-paths"); if (!el) return;
+    el.innerHTML = D.paths.map((p, i) => `<span class="chip">${esc(p)}${D.paths.length > 1 ? `<button type="button" aria-label="Remove ${esc(p)}" data-i="${i}">×</button>` : ""}</span>`).join("");
+    $$("button", el).forEach(b => b.onclick = () => { D.paths.splice(+b.dataset.i, 1); drawPaths(); refresh(); });
+  };
+  drawPaths();
+  const addPath = p => {
+    p = "/" + p.trim().replace(/^\/+|\/+$/g, "");
+    if (D.paths.length === 1 && D.paths[0] === "/" && p !== "/") D.paths = [p]; else if (!D.paths.includes(p)) D.paths.push(p);
+    drawPaths(); refresh();
+  };
+  $("#d-browse") && ($("#d-browse").onclick = () => browseDialog(D.share_id, addPath));
+  const typed = async () => {
+    const el = $("#d-addpath"), p = el.value.trim(); if (!p) return;
+    const share = shares.find(x => x.id === D.share_id);
+    if (share?.status.mounted) {
+      try { await api(`/api/shares/${D.share_id}/browse?path=${encodeURIComponent(p)}`); }
+      catch (e) { toast(`${p}: ${e.message}`, true); return; }
+    }
+    addPath(p); el.value = "";
+  };
+  $("#d-addpath-btn") && ($("#d-addpath-btn").onclick = typed);
+  $("#d-addpath") && ($("#d-addpath").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); typed(); } });
+
+  // --- report type
+  $$("#d-type button").forEach(b => b.onclick = () => { uiType = b.dataset.t; D.expression_override = null; editor.set(""); drawType(); drawFilters(); refresh(); });
+  function drawType() {
+    $$("#d-type button").forEach(b => b.setAttribute("aria-pressed", b.dataset.t === uiType));
+    D.mode = uiType === "summary" ? "sum" : uiType === "custom" ? "custom" : "eval";
+    if (uiType !== "summary") D.folders.enabled = false;
+    if (uiType === "listing") D.eval.source = "fields";
+    if (uiType === "system") D.eval.source = "system";
+    const body = $("#d-type-body");
+    if (uiType === "summary") {
+      const rowSel = D.sum.group_by.find(g => CAT.row_groups[g]);
+      body.innerHTML = `<p class="hint" style="margin:0">Runs <code>hs sum</code>: one fast pass over every file under each path, totalled into groups.</p>
+        <div><h3>Group by</h3><div class="checks">
+          ${Object.entries(CAT.group_keys).map(([k,v]) => `<label class="check"><input type="checkbox" name="g" value="${k}" ${D.sum.group_by.includes(k)?"checked":""}>${esc(v.label)}</label>`).join("")}
+          ${Object.entries(CAT.row_groups).map(([k,v]) => `<label class="check"><input type="checkbox" name="g" value="${k}" ${D.sum.group_by.includes(k)?"checked":""}>${esc(v.label)}</label>`).join("")}
+        </div><div class="hint">Leave all unticked for a single total. Storage volume combines with owner, group and the others; active objective is used on its own.</div></div>
+        <div><h3>Metrics</h3><div class="checks">
+          ${Object.entries(CAT.metrics).map(([k,v]) => `<label class="check"><input type="checkbox" name="m" value="${k}" ${D.sum.metrics.includes(k)?"checked":""}>${esc(v.label)}</label>`).join("")}
+        </div></div>
+        <div style="max-width:220px"><label class="f" for="d-topn">Largest files per group</label><select id="d-topn" ${D.sum.metrics.includes("top_files")?"":"disabled"}>${CAT.top_n_choices.map(n => `<option ${+D.sum.top_n===n?"selected":""}>${n}</option>`).join("")}</select></div>
+        <div><h3>Break down by folder</h3>
+          <label class="check"><input type="checkbox" id="d-pf" ${D.folders.enabled?"checked":""}>Report each folder separately</label>
+          <div class="row" style="margin:6px 0 0 24px;gap:16px" ${D.folders.enabled?"":"hidden"} id="d-pf-opts">
+            <label class="row" style="gap:8px;font-size:14px">Levels below each folder to scan
+              <select id="d-pf-depth" style="width:auto">${CAT.folder_depths.map(x => `<option value="${x}" ${String(D.folders.depth)===String(x)?"selected":""}>${x === "all" ? "All levels" : x}</option>`).join("")}</select></label>
+            <label class="check"><input type="checkbox" id="d-pf-hidden" ${D.folders.include_hidden?"checked":""}>Include hidden folders</label></div>
+          <div class="hint">Runs hs sum once per folder, in parallel. Each folder's totals include everything below it. The folder you picked is included as the first row.</div></div>`;
+      $$("input[name=g]", body).forEach(cb => cb.onchange = () => {
+        const v = cb.value;
+        if (cb.checked) D.sum.group_by = v === "objective" ? [v] : [...D.sum.group_by.filter(g => g !== "objective"), v];
+        else D.sum.group_by = D.sum.group_by.filter(g => g !== v);
+        drawType(); refresh(); });
+      $$("input[name=m]", body).forEach(cb => cb.onchange = () => {
+        D.sum.metrics = $$("input[name=m]:checked", body).map(x => x.value); drawType(); refresh(); });
+      $("#d-topn", body).onchange = e => { D.sum.top_n = +e.target.value; refresh(); };
+      $("#d-pf", body).onchange = e => { D.folders.enabled = e.target.checked; $("#d-pf-opts", body).hidden = !e.target.checked; D.display.fields = []; refresh(); };
+      $("#d-pf-depth", body).onchange = e => { D.folders.depth = e.target.value === "all" ? "all" : +e.target.value; refresh(); };
+      $("#d-pf-hidden", body).onchange = e => { D.folders.include_hidden = e.target.checked; refresh(); };
+    } else if (uiType === "listing") {
+      body.innerHTML = `<p class="hint" style="margin:0">Runs <code>hs eval</code> and returns one row per file. Large trees produce large results; add filters to narrow it.</p>
+        <div><h3>Fields per file</h3><div class="checks">${Object.entries(CAT.eval_fields).map(([k,v]) => `<label class="check"><input type="checkbox" name="ef" value="${k}" ${D.eval.fields.includes(k)?"checked":""}>${esc(v.label)}</label>`).join("")}</div></div>
+        <label class="check"><input type="checkbox" id="d-rec" ${D.eval.recursive?"checked":""}>Include everything below each path (-r)</label>
+        <label class="check"><input type="checkbox" id="d-fo" ${D.eval.files_only!==false?"checked":""}>Files only (skip directories)</label>`;
+      $$("input[name=ef]", body).forEach(cb => cb.onchange = () => {
+        const on = cb.checked, v = cb.value;
+        D.eval.fields = on ? [...D.eval.fields, v] : D.eval.fields.filter(f => f !== v); refresh(); });
+      $("#d-rec", body).onchange = e => { D.eval.recursive = e.target.checked; refresh(); };
+      $("#d-fo", body).onchange = e => { D.eval.files_only = e.target.checked; refresh(); };
+    } else if (uiType === "system") {
+      body.innerHTML = `<p class="hint" style="margin:0">Runs <code>hs eval</code> once against the share to read cluster-level information.</p>
+        <div style="max-width:320px"><label class="f" for="d-sys">Query</label><select id="d-sys">${Object.entries(CAT.system_queries).map(([k,v]) => `<option value="${k}" ${D.eval.system_query===k?"selected":""}>${esc(v.label)}</option>`).join("")}</select></div>`;
+      $("#d-sys", body).onchange = e => { D.eval.system_query = e.target.value; D.display.fields = []; refresh(); };
+    } else {
+      body.innerHTML = `<div class="row"><label class="f" style="margin:0">Command</label><div class="seg" id="d-verb">${["sum","eval"].map(v => `<button type="button" data-v="${v}" aria-pressed="${D.custom_verb===v}">hs ${v}</button>`).join("")}</div></div>
+        <div><label class="f" for="d-exp">Expression</label><textarea id="d-exp" spellcheck="false" placeholder="IS_FILE?SUMS_TABLE{|KEY=OWNER,|VALUE={1FILE,SPACE_USED}}">${esc(D.custom_expression)}</textarea></div>
+        <div><label class="f" for="d-cols">Column names</label><input type="text" id="d-cols" value="${esc(D.custom_columns)}" placeholder="Files, Space used">
+          <div class="hint">Comma-separated names for each value in a returned tuple, in order. Leave blank to use the raw structure.</div></div>`;
+      $$("#d-verb button", body).forEach(b => b.onclick = () => { D.custom_verb = b.dataset.v; $$("#d-verb button", body).forEach(x => x.setAttribute("aria-pressed", x === b)); refresh(); });
+      bindVal("#d-exp", v => D.custom_expression = v);
+      bindVal("#d-cols", v => D.custom_columns = v);
+    }
+  }
+
+  // --- filters
+  const SIZE_U = [["KB",1e3],["MB",1e6],["GB",1e9],["TB",1e12]];
+  const splitSize = b => { if (!b && b !== 0) return ["", "GB"]; for (const [u, m] of [...SIZE_U].reverse()) if (b % m === 0) return [b / m, u]; return [b / 1000, "KB"]; };
+  function drawFilters() {
+    const panel = $("#d-filters-panel");
+    panel.hidden = uiType === "system" || uiType === "custom";
+    if (panel.hidden) return;
+    const F = D.filters, [mn, mnu] = splitSize(F.min_size), [mx, mxu] = splitSize(F.max_size);
+    const sizeIn = (id, v, u) => `<div class="row" style="flex-wrap:nowrap"><input type="number" min="0" step="any" id="${id}" value="${esc(v)}" style="flex:1"><select id="${id}-u" style="width:84px">${SIZE_U.map(([x]) => `<option ${x===u?"selected":""}>${x}</option>`).join("")}</select></div>`;
+    $("#d-filters").innerHTML = `<div class="stack">
+      <div class="grid2"><div><label class="f" for="f-min">Minimum space used</label>${sizeIn("f-min", mn, mnu)}</div>
+        <div><label class="f" for="f-max">Maximum space used</label>${sizeIn("f-max", mx, mxu)}</div></div>
+      <div class="checks"><label class="check"><input type="checkbox" id="f-open" ${F.only_open?"checked":""}>Open files only</label>
+        <label class="check"><input type="checkbox" id="f-online" ${F.only_online?"checked":""}>Online files only</label>
+        <label class="check"><input type="checkbox" id="f-err" ${F.only_errors?"checked":""}>Files with errors only</label>
+        <label class="check"><input type="checkbox" id="f-nonfiles" ${D.nonfiles?"checked":""}>Include non-files (--nonfiles)</label></div>
+      <div style="max-width:280px"><label class="f" for="f-age">Not accessed for at least</label>
+        <div class="row" style="flex-wrap:nowrap"><input type="number" min="0" id="f-age" value="${esc(F.access_age_days || "")}" placeholder="Any" style="flex:1"><span>days</span></div>
+        <div class="hint">Uses Hammerspace's ACCESS_AGE.</div></div>
+      <div><label class="f" for="f-cond">Extra condition</label><input type="text" id="f-cond" class="mono" value="${esc(F.custom_condition)}" placeholder='OWNER!="root"'>
+        <div class="hint">Any HammerScript condition. Files that don't match are skipped.</div></div></div>`;
+    const sizeVal = id => { const v = $(`#${id}`).value; if (v === "") return null; return Math.round(parseFloat(v) * SIZE_U.find(([u]) => u === $(`#${id}-u`).value)[1]); };
+    ["f-min","f-min-u","f-max","f-max-u"].forEach(id => $("#" + id).addEventListener("input", () => { F.min_size = sizeVal("f-min"); F.max_size = sizeVal("f-max"); refresh(); }));
+    $("#f-open").onchange = e => { F.only_open = e.target.checked; refresh(); };
+    $("#f-online").onchange = e => { F.only_online = e.target.checked; refresh(); };
+    $("#f-err").onchange = e => { F.only_errors = e.target.checked; refresh(); };
+    $("#f-age").oninput = e => { F.access_age_days = e.target.value ? +e.target.value : null; refresh(); };
+    $("#f-nonfiles").onchange = e => { D.nonfiles = e.target.checked; refresh(); };
+    bindVal("#f-cond", v => F.custom_condition = v);
+  }
+
+  // --- output fields
+  function drawFields(cols) {
+    const disp = D.display;
+    let chosen = (disp.fields || []).filter(c => cols.includes(c));
+    if (!disp.fields?.length) chosen = [...cols];
+    const order = [...chosen, ...cols.filter(c => !chosen.includes(c))];
+    const ul = $("#q-fields");
+    ul.innerHTML = cols.length ? order.map((c, i) => { const on = chosen.includes(c); return `<li class="${on?"":"off"}">
+      <input type="checkbox" aria-label="Show ${esc(c)}" data-c="${esc(c)}" ${on?"checked":""} style="accent-color:var(--accent)">
+      <span class="fname">${esc(c)}</span>
+      <button class="ghost" data-up="${i}" aria-label="Move ${esc(c)} up" ${i===0||!on?"disabled":""}>↑</button>
+      <button class="ghost" data-down="${i}" aria-label="Move ${esc(c)} down" ${!on||i>=chosen.length-1?"disabled":""}>↓</button></li>`; }).join("")
+      : `<li class="hint">Columns appear here once the report is valid. Custom expressions without column names show whatever structure Hammerspace returns.</li>`;
+    const commit = list => { disp.fields = list.length === cols.length && list.every((c, i) => c === cols[i]) ? [] : list; drawFields(cols); };
+    $$("input[data-c]", ul).forEach(cb => cb.onchange = () => {
+      const c = cb.dataset.c; let list = [...chosen];
+      if (cb.checked) list.push(c); else { list = list.filter(x => x !== c); if (!list.length) { toast("Keep at least one field", true); cb.checked = true; return; } }
+      commit(list); });
+    $$("[data-up]", ul).forEach(b => b.onclick = () => { const i = +b.dataset.up, l = [...chosen]; [l[i-1], l[i]] = [l[i], l[i-1]]; commit(l); });
+    $$("[data-down]", ul).forEach(b => b.onclick = () => { const i = +b.dataset.down, l = [...chosen]; [l[i+1], l[i]] = [l[i], l[i+1]]; commit(l); });
+    const sort = $("#q-sort");
+    sort.innerHTML = `<option value="">As returned</option>` + cols.map(c => `<option ${disp.sort_by===c?"selected":""}>${esc(c)}</option>`).join("");
+  }
+  $("#q-sort").onchange = e => D.display.sort_by = e.target.value;
+  $("#q-dir").value = D.display.sort_desc === false ? "0" : "1";
+  $("#q-dir").onchange = e => D.display.sort_desc = e.target.value === "1";
+  $("#q-limit").oninput = e => D.display.limit = e.target.value ? +e.target.value : null;
+  $("#q-unit").onchange = e => D.display.size_unit = e.target.value;
+
+  // --- editable expression
+  let lastGenerated = null;
+  const editor = codeEditor($("#q-edit"), {
+    onInput: v => {
+      if (D.mode === "custom") { D.custom_expression = v; const ta = $("#d-exp"); if (ta && ta.value !== v) ta.value = v; }
+      else D.expression_override = (v.trim().replace(/\s+/g, " ") === lastGenerated || !v.trim()) ? null : v;
+      refresh();
+    },
+    onRun: () => $("#run-now").click(),
+  });
+  $("#q-reset").onclick = () => { D.expression_override = null; editor.set(""); refresh(); };
+
+  // --- live preview
+  let t = null;
+  function refresh() { clearTimeout(t); t = setTimeout(doPreview, 180); }
+  async function doPreview() {
+    const seq = ++previewSeq;
+    try {
+      const p = await api("/api/preview", {method:"POST", body:D});
+      if (seq !== previewSeq) return;
+      lastPreview = p;
+      lastGenerated = p.generated_expression;
+      if (!editor.focused()) editor.set(p.expression);
+      $("#q-tag").hidden = !p.edited; $("#q-reset").hidden = !p.edited;
+      const note = $("#q-note"); note.classList.remove("err");
+      note.textContent = p.edited ? "Edited by hand. Changing the report options won't change it until you reset to the generated expression."
+        : "Edit the expression directly to fine-tune it. Ctrl+Enter runs it.";
+      $("#q-cmd").innerHTML = p.commands.map(c => c.startsWith("#") ? `<p class="cmd" style="color:#A9BBD6;font-family:var(--sans)">${esc(c.slice(2))}</p>` : `<p class="cmd">$ ${esc(c)}</p>`).join("");
+      drawFields(p.columns);
+    } catch (e) {
+      if (seq !== previewSeq) return;
+      lastPreview = null;
+      const note = $("#q-note"); note.textContent = e.message; note.classList.add("err"); $("#q-cmd").innerHTML = "";
+      drawFields([]);
+    }
+  }
+
+  // --- crawl speed
+  function drawSpeed() {
+    const T = D.throttle, P = CAT.throttle_presets, cur = T.preset || "normal";
+    const shown = cur === "custom" ? T : P[cur];
+    const desc = x => `${x.concurrency} hs command${x.concurrency > 1 ? "s" : ""} at once, ${+x.pause ? x.pause + "s pause between commands" : "no pause"}, ${+x.list_rate ? x.list_rate + " folder listings per second" : "folder listing not limited"}`;
+    $("#d-speed").innerHTML = `
+      <div class="seg" id="sp-preset">${[...Object.entries(P).map(([k, v]) => [k, v.label]), ["custom", "Custom"]].map(([k, l]) =>
+        `<button type="button" data-p="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>
+      ${cur === "custom" ? `<div class="grid2" style="grid-template-columns:repeat(3,1fr)">
+        <div><label class="f" for="sp-c">hs commands at once</label><input type="number" id="sp-c" min="1" max="16" value="${esc(shown.concurrency ?? 1)}"></div>
+        <div><label class="f" for="sp-p">Pause between commands (s)</label><input type="number" id="sp-p" min="0" max="3600" step="0.5" value="${esc(shown.pause ?? 0)}"></div>
+        <div><label class="f" for="sp-r">Folder listings per second</label><input type="number" id="sp-r" min="0" max="1000" value="${esc(shown.list_rate ?? 0)}" placeholder="0 = no limit"></div></div>`
+      : `<p class="hint" style="margin:0">${esc(desc(shown))}.</p>`}
+      <p class="hint" style="margin:0">Paces the commands this report sends. Per-folder reports send one hs command per folder and list folders over the mount, so slower settings spread that work out over more time. A single hs sum is one operation on the cluster and can't be slowed down from here; break it down by folder to split it into smaller pieces. This server runs at most ${CAT.max_hs_processes} hs commands at once across all reports.</p>`;
+    $$("#sp-preset button").forEach(b => b.onclick = () => {
+      const k = b.dataset.p;
+      D.throttle = k === "custom" ? {preset: "custom", concurrency: shown.concurrency, pause: shown.pause, list_rate: shown.list_rate} : {preset: k};
+      drawSpeed(); refresh();
+    });
+    const num = (id, key) => { const el = $(id); if (el) el.oninput = () => { D.throttle[key] = el.value === "" ? 0 : +el.value; refresh(); }; };
+    num("#sp-c", "concurrency"); num("#sp-p", "pause"); num("#sp-r", "list_rate");
+  }
+
+  drawType(); drawFilters(); drawSpeed();
+  const pre = new URLSearchParams(location.hash.split("?")[1] || "").get("preset");
+  if (pre && !existing) applyPreset(pre); else doPreview();
+
+  $("#save").onclick = async () => {
+    if (!D.name.trim()) { toast("Give the report a name", true); $("#d-name").focus(); return; }
+    const saved = await act(() => existing ? api(`/api/definitions/${existing.id}`, {method:"PUT", body:D}) : api("/api/definitions", {method:"POST", body:D}), "Report saved");
+    if (!existing) location.hash = `#/design/${saved.id}`; else route();
+  };
+  $("#run-now").onclick = async () => {
+    const r = await act(() => api("/api/run", {method:"POST", body:{...D, name: D.name || "Unsaved report"}}));
+    location.hash = `#/run/${r.run_id}`;
+  };
+}
+
+function browseDialog(shareId, onPick) {
+  let cur = "/";
+  openDialog(`<div class="body"><h2>Add a folder</h2><div class="crumbs" id="b-crumbs"></div><div class="dirlist" id="b-list"><p class="empty">Loading…</p></div>
+    <div class="actions"><button data-close>Cancel</button><button class="primary" id="b-pick">Add this folder</button></div></div>`, d => {
+    const load = async path => {
+      try {
+        const r = await api(`/api/shares/${shareId}/browse?path=${encodeURIComponent(path)}`); cur = r.path;
+        const parts = cur.split("/").filter(Boolean);
+        $("#b-crumbs", d).innerHTML = `<button data-p="/">share</button>` + parts.map((p, i) => `/<button data-p="/${parts.slice(0, i+1).map(esc).join("/")}">${esc(p)}</button>`).join("");
+        $("#b-list", d).innerHTML = (cur !== "/" ? `<button data-p="${esc("/" + parts.slice(0, -1).join("/"))}">..</button>` : "") +
+          (r.dirs.map(x => `<button data-p="${esc((cur === "/" ? "" : cur) + "/" + x)}">${esc(x)}/</button>`).join("") || `<p class="hint" style="padding:10px 12px;margin:0">No subfolders.</p>`) +
+          (r.truncated ? `<p class="hint" style="padding:8px 12px">Showing the first 500 folders.</p>` : "");
+        $$("[data-p]", d).forEach(b => b.onclick = () => load(b.dataset.p));
+        $("#b-pick", d).textContent = `Add ${cur}`;
+      } catch (e) { $("#b-list", d).innerHTML = `<div class="errbox" style="margin:10px">${esc(e.message)}</div>`; }
+    };
+    load("/");
+    $("#b-pick", d).onclick = () => { onPick(cur); dlg.close(); };
+  });
+}
+
+// ---------------------------------------------------------------- runs
+async function renderRuns() {
+  const runs = await api("/api/runs");
+  view.innerHTML = `<header class="page"><div><h1>Results</h1><p class="sub">Every report run, newest first. Scheduled runs are pruned to each schedule's retention setting.</p></div></header>
+  <div class="panel">${runs.length ? `<div class="scroll"><table class="data"><thead><tr><th>Report</th><th>Share</th><th>Started</th><th>Took</th><th>How</th><th class="num">Rows</th><th>Status</th><th></th></tr></thead><tbody>
+    ${runs.map(r => `<tr><td><a href="#/run/${r.id}"><b>${esc(r.name)}</b></a></td><td>${esc(r.share_name || "")}</td><td>${when(r.started)}</td>
+      <td>${dur(r.started, r.finished)}</td><td>${esc(r.trigger)}</td><td class="num">${num(r.row_count)}</td><td>${statusPill(r.status)}</td>
+      <td><button class="ghost danger" data-del="${r.id}">Delete</button></td></tr>`).join("")}
+  </tbody></table></div>` : `<div class="empty"><p>No results yet. Run a report to see it here.</p><a class="btn primary" href="#/reports">Go to reports</a></div>`}</div>`;
+  $$("[data-del]").forEach(b => b.onclick = async () => { await act(() => api(`/api/runs/${b.dataset.del}`, {method:"DELETE"})); renderRuns(); });
+  if (runs.some(r => ["queued","running"].includes(r.status))) pollTimer = setTimeout(() => location.hash.startsWith("#/runs") && renderRuns(), 3000);
+}
+
+async function renderRun(id) {
+  let override = null; // ad hoc column/sort choices on this page
+  let pendingExp = null; // edited HammerScript, kept across redraws
+  async function load() {
+    const q = new URLSearchParams();
+    if (override) { q.set("fields", override.fields.join(",")); q.set("sort_by", override.sort_by || ""); q.set("sort_desc", override.sort_desc); q.set("size_unit", override.size_unit || "auto"); }
+    const r = await api(`/api/runs/${id}?${q}`);
+    draw(r);
+    if (["queued","running"].includes(r.status)) pollTimer = setTimeout(() => location.hash === `#/run/${id}` && load(), 2500);
+  }
+  function draw(r) {
+    const v = r.view, meta = r.column_meta || {}, unit = v.display.size_unit || "auto";
+    const hasSizes = v.available.some(c => meta[c]?.unit === "bytes") || r.has_files;
+    const head = c => meta[c]?.unit === "bytes" && unit !== "auto" ? `${c} (${UNIT_L[unit]})` : c;
+    const isBytes = c => meta[c]?.unit === "bytes", isNum = c => meta[c]?.numeric || v.rows.some(x => typeof x[c] === "number");
+    const sortCol = v.display.sort_by, barCol = (sortCol && isNum(sortCol)) ? sortCol : v.columns.find(isBytes);
+    const max = barCol ? Math.max(1, ...v.rows.map(x => typeof x[barCol] === "number" ? x[barCol] : 0)) : 1;
+    const cell = (c, x) => {
+      const val = x[c];
+      if (Array.isArray(val) && val.length && val[0] && "path" in val[0]) return `<details class="top"><summary>${val.length} ${val.length === 1 ? "file" : "files"}</summary><ol>${val.map(f => `<li><span class="mono">${esc(f.path)}</span> <span class="hint">${bytes(f.space_used, unit)}${unit !== "auto" ? " " + UNIT_L[unit] : ""}</span></li>`).join("")}</ol></details>`;
+      if (val !== null && typeof val === "object") return `<span class="mono">${esc(JSON.stringify(val))}</span>`;
+      const txt = isBytes(c) ? bytes(val, unit) : typeof val === "number" ? num(val) : esc(val);
+      if (c === barCol && typeof val === "number" && val > 0) return `<div class="bar"><i style="width:${(val/max*100).toFixed(1)}%"></i><span>${txt}</span></div>`;
+      return c === "Path" || c === "Folder" || /path/i.test(c) ? `<span class="mono">${txt}</span>` : txt;
+    };
+    const qs = new URLSearchParams({fields: v.columns.join(","), sort_by: v.display.sort_by || "", sort_desc: v.display.sort_desc !== false, size_unit: unit});
+    view.innerHTML = `
+    <header class="page"><div><h1>${esc(r.name)}</h1>
+      <div class="meta" style="margin-top:8px">${statusPill(r.status)}<span>Share <b>${esc(r.share_name || "—")}</b></span><span>Started <b>${when(r.started)}</b></span>
+      ${r.finished ? `<span>Took <b>${dur(r.started, r.finished)}</b></span>` : ""}<span><b>${num(r.row_count)}</b> rows</span><span>${esc(r.trigger)}</span></div></div>
+      <div class="row">${r.definition_id ? `<a class="btn" href="#/design/${r.definition_id}">Edit report</a><button id="rerun">Run again</button>` : ""}
+        <details class="menu"><summary class="btn primary">Download</summary><div class="menu-pop">
+          <a href="#" id="dl-analysis"><b>Analysis CSV…</b><span>Plain values for sorting in a spreadsheet. Choose units and columns${r.has_files ? "; largest files as their own CSV" : ""}</span></a>
+          <a href="/api/runs/${id}/export?format=csv&${qs}"><b>Table as shown</b><span>The columns, order and sort on screen</span></a>
+          <a href="/api/runs/${id}/export?format=json&${qs}"><b>JSON</b><span>Table as shown, as JSON</span></a>
+          ${r.has_folders ? `<a href="/api/runs/${id}/export?format=prometheus"><b>Prometheus metrics</b><span>Per-folder size and file count</span></a>` : ""}
+          <a href="/api/runs/${id}/export?format=raw"><b>Raw hs output</b><span>Exactly what Hammerspace returned</span></a>
+        </div></details></div></header>
+    ${r.error ? `<div class="errbox" style="margin-bottom:14px">${esc(r.error)}</div>` : ""}
+    ${["queued","running"].includes(r.status) ? `<div class="panel empty"><p>${r.status === "queued" ? "Waiting for a free slot…" : (r.phase === "listing" ? `Listing folders${r.folders_found ? ` (${num(r.folders_found)} found so far)` : ""}. `
+          : r.target_count > 1 ? `Scanned ${num(r.targets_done || 0)} of ${num(r.target_count)} folders. ` : "hs is walking the file tree. ")
+          + (r.throttle && r.throttle.preset !== "normal" ? `Crawl speed: ${esc(r.throttle.preset)}. ` : "") + "Large shares can take a while; this page updates on its own."}</p></div>` : `
+    <section class="panel">
+      ${v.available.length ? `<div class="toolbar"><span class="hint">Fields</span><div class="colpick">${v.available.map(c => `<button data-col="${esc(c)}" aria-pressed="${v.columns.includes(c)}">${esc(c)}</button>`).join("")}</div>
+        <span class="spacer"></span>
+        ${hasSizes ? `<label class="row" style="gap:6px;font-size:13px;color:var(--ink-2)">Sizes in <select id="r-unit" style="width:auto;padding:4px 8px">
+          ${[["auto","Auto"],["bytes","Bytes"],["kb","KB"],["mb","MB"],["gb","GB"],["tb","TB"]].map(([x,l]) => `<option value="${x}" ${unit===x?"selected":""}>${l}</option>`).join("")}</select></label>` : ""}
+        ${r.definition_id ? `<button class="ghost" id="save-disp">Save as report default</button>` : ""}</div>` : ""}
+      ${v.rows.length ? `<div class="scroll" style="max-height:70vh"><table class="data"><thead><tr>${v.columns.map(c => `<th class="sortable ${isNum(c)?"num":""}" data-sort="${esc(c)}" aria-sort="${v.display.sort_by===c ? (v.display.sort_desc!==false?"descending":"ascending") : "none"}">${esc(head(c))}${v.display.sort_by===c ? (v.display.sort_desc!==false?" ↓":" ↑") : ""}</th>`).join("")}</tr></thead>
+        <tbody>${v.rows.map(x => `<tr>${v.columns.map(c => `<td class="${isNum(c) && !Array.isArray(x[c]) ? "num" : ""}">${cell(c, x)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`
+        : `<div class="empty"><p>${r.status === "failed" ? "The report failed before returning rows. Check the command output below." : "No files matched."}</p></div>`}
+    </section>`}
+    <section class="panel" style="margin-top:16px"><h2>What ran</h2>
+      ${r.expression ? (["queued","running"].includes(r.status) ? `<div class="query" style="margin-bottom:12px"><pre>${highlight(r.expression)}</pre></div>` : `
+      <div class="query" style="margin-bottom:12px">
+        <div class="qhead"><h3>HammerScript</h3>${String(r.trigger || "").includes("edited") ? `<span class="qtag">Edited</span>` : ""}<span class="spacer"></span>
+          <button class="qbtn" id="w-revert" hidden>Undo changes</button></div>
+        <div id="w-edit"></div>
+        <p class="qnote" id="w-note" aria-live="polite">Edit the expression and run it again. Ctrl+Enter runs it.</p>
+        <h3>Command</h3><div id="w-cmd" aria-live="polite">${(r.outputs || []).slice(0, 1).map(o => `<p class="cmd">$ ${esc(o.command)}</p>`).join("")}</div>
+        <div class="row" style="margin-top:10px"><button class="primary" id="w-run">Run again</button>
+          ${r.definition_id ? `<button id="w-save" disabled>Save to report</button>` : ""}</div>
+      </div>`) : ""}
+      ${r.outputs_total ? `<p class="hint">Showing the first ${r.outputs.length} of ${num(r.outputs_total)} hs runs. Download the raw output for all of them.</p>` : ""}
+      ${(r.outputs || []).map(o => `<details><summary><span class="mono">${esc(o.folder || o.path)}</span> exit ${o.rc} in ${o.seconds}s${o.truncated ? " (output truncated)" : ""}</summary>
+        <pre class="raw">$ ${esc(o.command)}\n\n${esc(o.stdout.slice(0, 200000)) || "(no output)"}${o.stderr ? "\n\n--- stderr ---\n" + esc(o.stderr) : ""}</pre></details>`).join("") || `<p class="hint">Nothing has run yet.</p>`}
+      ${(r.outputs || []).length ? `<p style="margin:10px 0 0"><a href="/api/runs/${id}/export?format=raw">Download raw output</a></p>` : ""}
+    </section>`;
+    const cur = () => ({fields: [...v.columns], sort_by: v.display.sort_by || "", sort_desc: v.display.sort_desc !== false, size_unit: unit});
+    if ($("#w-edit")) wireEditor(r);
+    $("#r-unit") && ($("#r-unit").onchange = e => { override = {...cur(), size_unit: e.target.value}; load(); });
+    $$("[data-col]").forEach(b => b.onclick = () => {
+      const c = b.dataset.col, o = cur();
+      if (o.fields.includes(c)) { if (o.fields.length === 1) return; o.fields = o.fields.filter(x => x !== c); }
+      else o.fields = v.available.filter(x => o.fields.includes(x) || x === c);
+      override = o; load(); });
+    $$("[data-sort]").forEach(th => th.onclick = () => {
+      const o = cur(), c = th.dataset.sort; o.sort_desc = o.sort_by === c ? !o.sort_desc : true; o.sort_by = c; override = o; load(); });
+    $("#dl-analysis").onclick = e => { e.preventDefault(); e.target.closest("details").open = false; exportDialog(r); };
+    $("#rerun") && ($("#rerun").onclick = async () => { const n = await act(() => api(`/api/definitions/${r.definition_id}/run`, {method:"POST"})); location.hash = `#/run/${n.run_id}`; });
+    $("#save-disp") && ($("#save-disp").onclick = () => act(() => api(`/api/definitions/${r.definition_id}`, {method:"PUT",
+      body:{display:{...(r.definition.display || {}), ...cur()}}}), "Saved as the report's default fields"));
+  }
+  function wireEditor(r) {
+    const custom = r.definition?.mode === "custom";
+    const original = r.expression;
+    let seq = 0, t = null;
+    const ed = codeEditor($("#w-edit"), {value: pendingExp ?? original, onInput: v => { pendingExp = v; update(); }, onRun: () => run()});
+    const changed = () => (pendingExp ?? original).trim().replace(/\s+/g, " ") !== original;
+    const defnWith = v => custom ? {...r.definition, custom_expression: v} : {...r.definition, expression_override: v};
+    const update = () => {
+      $("#w-revert").hidden = !changed();
+      $("#w-run").textContent = changed() ? "Run edited expression" : "Run again";
+      if ($("#w-save")) $("#w-save").disabled = !changed();
+      clearTimeout(t);
+      t = setTimeout(async () => {
+        const n = ++seq, note = $("#w-note");
+        try {
+          const p = await api("/api/preview", {method: "POST", body: defnWith(ed.get())});
+          if (n !== seq) return;
+          $("#w-cmd").innerHTML = p.commands.map(c => c.startsWith("#") ? `<p class="cmd" style="color:#A9BBD6;font-family:var(--sans)">${esc(c.slice(2))}</p>` : `<p class="cmd">$ ${esc(c)}</p>`).join("");
+          note.classList.remove("err");
+          note.textContent = changed() ? "Edited. Run it to see the new results, or save it to the report." : "Edit the expression and run it again. Ctrl+Enter runs it.";
+        } catch (e) { if (n === seq) { note.textContent = e.message; note.classList.add("err"); } }
+      }, 150);
+    };
+    const run = async () => {
+      const v = ed.get().trim();
+      if (!v) { toast("Enter a HammerScript expression", true); return; }
+      const res = await act(() => r.definition_id
+        ? api(`/api/definitions/${r.definition_id}/run`, {method: "POST", body: changed() ? {expression: v} : {}})
+        : api("/api/run", {method: "POST", body: {...defnWith(v), name: r.name}}));
+      pendingExp = null;
+      location.hash = `#/run/${res.run_id}`;
+    };
+    $("#w-run").onclick = run;
+    $("#w-revert").onclick = () => { pendingExp = null; ed.set(original); $("#w-edit textarea").value = original; $("#w-edit pre").innerHTML = highlight(original) + "\n"; update(); };
+    $("#w-save") && ($("#w-save").onclick = async () => {
+      const v = ed.get().trim();
+      await act(() => api(`/api/definitions/${r.definition_id}`, {method: "PUT", body: custom ? {custom_expression: v} : {expression_override: v}}), "Saved to the report. Its next runs use this expression.");
+      $("#w-save").disabled = true;
+    });
+    if (pendingExp !== null) update();
+  }
+
+  await load();
+}
+
+function parseCsv(text) {
+  const rows = []; let row = [], cur = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i+1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ",") { row.push(cur); cur = ""; }
+    else if (ch === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; }
+    else if (ch !== "\r") cur += ch;
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+
+function exportDialog(r) {
+  const o = {meta: true, unit: "bytes", decimals: 2, paths: "full", ...(r.export_options || {})};
+  const files = r.has_files;
+  openDialog(`<div class="body"><h2>Analysis CSV</h2>
+    <div class="stack">
+      <div class="grid2"><div><label class="f" for="x-unit">Sizes in</label><select id="x-unit">
+          ${[["bytes","Bytes (whole numbers)"],["kb","KB"],["mb","MB"],["gb","GB"],["tb","TB"]].map(([v,l]) => `<option value="${v}" ${o.unit===v?"selected":""}>${l}</option>`).join("")}</select>
+          <div class="hint">Decimal units, matching Hammerspace (1 KB = 1,000 bytes).</div></div>
+        <div><label class="f" for="x-dec">Decimal places</label><input type="number" id="x-dec" min="0" max="6" value="${esc(o.decimals)}"></div></div>
+      <label class="check"><input type="checkbox" id="x-meta" ${o.meta ? "checked" : ""}><span>Repeat run details on every row
+        <span class="hint" style="display:block;margin:0">Adds run_id, run_started_utc, report, share and report_path. Useful when combining several runs into one sheet; leave off for a single report.</span></span></label>
+      ${files ? `<div style="max-width:340px"><label class="f" for="x-paths">Largest files paths</label><select id="x-paths">
+          <option value="full" ${o.paths==="full"?"selected":""}>Full path</option><option value="relative" ${o.paths==="relative"?"selected":""}>Relative to the report path</option></select></div>` : ""}
+      <div><h3>Summary preview</h3><div class="scroll" id="x-prev-s"></div></div>
+      ${files ? `<div><h3>Largest files preview</h3><div class="scroll" id="x-prev-f"></div></div>` : ""}
+      ${r.definition_id ? `<label class="check"><input type="checkbox" id="x-save">Use these settings for this report's scheduled exports</label>` : ""}
+    </div>
+    <div class="actions"><button data-close>Close</button>
+      ${files ? `<a class="btn" id="x-dl-f">Largest files CSV</a>` : ""}<a class="btn primary" id="x-dl-s">Summary CSV</a></div></div>`, d => {
+    const cur = () => ({meta: $("#x-meta", d).checked, unit: $("#x-unit", d).value,
+      decimals: +$("#x-dec", d).value || 0, paths: $("#x-paths", d)?.value || "full"});
+    const qs = (fmt) => { const c = cur(); return `/api/runs/${r.id}/export?` + new URLSearchParams({format: fmt, meta: c.meta, unit: c.unit, decimals: c.decimals, paths: c.paths}); };
+    const table = (text, max = 4) => {
+      const rows = parseCsv(text).filter(x => x.length > 1 || x[0]);
+      if (!rows.length) return `<p class="hint">No rows.</p>`;
+      const [head, ...body] = rows;
+      return `<table class="data"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>
+        ${body.slice(0, max).map(x => `<tr>${x.map(v => `<td class="${/^-?\d+(\.\d+)?$/.test(v) ? "num" : ""}">${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table>
+        ${body.length > max ? `<p class="hint">${body.length - max} more rows</p>` : ""}`;
+    };
+    let seq = 0;
+    const update = async () => {
+      const n = ++seq;
+      $("#x-dec", d).disabled = $("#x-unit", d).value === "bytes";
+      $("#x-dl-s", d).href = qs("analysis");
+      if (files) $("#x-dl-f", d).href = qs("files");
+      try {
+        const [a, f] = await Promise.all([fetch(qs("analysis")).then(x => x.text()), files ? fetch(qs("files")).then(x => x.text()) : ""]);
+        if (n !== seq) return;
+        $("#x-prev-s", d).innerHTML = table(a);
+        if (files) $("#x-prev-f", d).innerHTML = table(f);
+      } catch (e) { $("#x-prev-s", d).innerHTML = `<div class="errbox">${esc(e.message)}</div>`; }
+    };
+    $$("input,select", d).forEach(el => el.addEventListener("input", update));
+    const saveIfAsked = () => {
+      if ($("#x-save", d)?.checked) act(() => api(`/api/definitions/${r.definition_id}`, {method: "PUT", body: {export: cur()}}), "Saved for scheduled exports");
+    };
+    $$("#x-dl-s,#x-dl-f", d).forEach(a => a.addEventListener("click", saveIfAsked));
+    update();
+  }, "min(820px,94vw)");
+}
+
+// ---------------------------------------------------------------- schedules
+const CRON_PRESETS = [["Every hour","0 * * * *"],["Daily at 02:00","0 2 * * *"],["Weekdays at 06:00","0 6 * * 1-5"],["Mondays at 06:00","0 6 * * 1"],["1st of the month","0 3 1 * *"]];
+async function renderSchedules() {
+  const [scheds, defs, exports] = await Promise.all([api("/api/schedules"), api("/api/definitions"), api("/api/exports")]);
+  const cronLabel = c => (CRON_PRESETS.find(p => p[1] === c) || [null])[0];
+  view.innerHTML = `
+  <header class="page"><div><h1>Schedules</h1><p class="sub">Run saved reports on a cron schedule. Times use the container's TZ setting.</p></div>
+    <button class="primary" id="add" ${defs.length ? "" : "disabled"}>New schedule</button></header>
+  <div class="panel">${scheds.length ? `<div class="scroll"><table class="data"><thead><tr><th>Schedule</th><th>Report</th><th>When</th><th>Next run</th><th>Last run</th><th></th></tr></thead><tbody>
+    ${scheds.map(s => `<tr><td><b>${esc(s.name || s.definition_name)}</b>${s.enabled === false ? ` <span class="pill">Paused</span>` : ""}
+        <div class="hint">Keeps ${s.keep_last ? `last ${s.keep_last} results` : "all results"}${s.export_csv ? ", writes analysis CSVs" : ""}</div></td>
+      <td>${s.definition_name ? `<a href="#/design/${s.definition_id}">${esc(s.definition_name)}</a>` : `<span class="pill bad">Report deleted</span>`}</td>
+      <td>${esc(cronLabel(s.cron) || "")} <span class="mono">${esc(s.cron)}</span></td>
+      <td>${s.enabled === false ? "—" : when(s.next_run)}</td>
+      <td>${s.last_run_id ? `<a href="#/run/${s.last_run_id}">${statusPill(s.last_status)}</a> <span class="hint">${when(s.last_run_at)}</span>` : `<span class="hint">Never</span>`}</td>
+      <td><div class="row" style="justify-content:flex-end"><button data-now="${s.id}">Run now</button>
+        <button class="ghost" data-toggle="${s.id}">${s.enabled === false ? "Resume" : "Pause"}</button>
+        <button class="ghost" data-edit="${s.id}">Edit</button><button class="ghost danger" data-del="${s.id}">Delete</button></div></td></tr>`).join("")}
+  </tbody></table></div>` : `<div class="empty"><p>${defs.length ? "No schedules yet." : "Save a report first, then schedule it here."}</p>
+    ${defs.length ? `<button class="primary" id="add2">New schedule</button>` : `<a class="btn primary" href="#/design">New report</a>`}</div>`}</div>
+  ${exports.length ? `<section class="panel" style="margin-top:16px"><h2>Exported CSV files</h2><p class="hint" style="margin-top:-4px">Written to /data/exports by schedules with CSV export on. Each run writes its own summary and largest-files files; the <span class="mono">-history.csv</span> files collect every run for trend analysis.</p>
+    <div class="scroll" style="max-height:320px"><table class="data"><tbody>${exports.map(e => `<tr><td><a class="mono" href="/api/exports/${e.path.split("/").map(encodeURIComponent).join("/")}">${esc(e.path.split("/").pop())}</a></td><td>${when(e.modified)}</td><td class="num">${bytes(e.size)}</td></tr>`).join("")}</tbody></table></div></section>` : ""}`;
+  const byId = Object.fromEntries(scheds.map(s => [s.id, s]));
+  $$("#add,#add2").forEach(b => b.onclick = () => schedDialog(null, defs));
+  $$("[data-edit]").forEach(b => b.onclick = () => schedDialog(byId[b.dataset.edit], defs));
+  $$("[data-now]").forEach(b => b.onclick = async () => { await act(() => api(`/api/schedules/${b.dataset.now}/run`, {method:"POST"}), "Started — it will appear under Results"); setTimeout(renderSchedules, 1500); });
+  $$("[data-toggle]").forEach(b => b.onclick = async () => { const s = byId[b.dataset.toggle]; await act(() => api(`/api/schedules/${s.id}`, {method:"PUT", body:{enabled: s.enabled === false}})); renderSchedules(); });
+  $$("[data-del]").forEach(b => b.onclick = async () => { if (!confirm("Delete this schedule? Past results are kept.")) return; await act(() => api(`/api/schedules/${b.dataset.del}`, {method:"DELETE"}), "Schedule deleted"); renderSchedules(); });
+  if (location.hash.includes("?new=")) schedDialog({definition_id: location.hash.split("?new=")[1]}, defs);
+}
+function schedDialog(s, defs) {
+  const isNew = !s?.id; s = {cron:"0 2 * * *", keep_last:30, export_csv:false, enabled:true, ...(s||{})};
+  openDialog(`<form id="scf"><h2>${isNew ? "New schedule" : "Edit schedule"}</h2><div class="stack">
+    <div><label class="f" for="c-def">Report</label><select id="c-def">${defs.map(d => `<option value="${d.id}" ${d.id===s.definition_id?"selected":""}>${esc(d.name)}</option>`).join("")}</select></div>
+    <div><label class="f" for="c-name">Name</label><input type="text" id="c-name" value="${esc(s.name)}" placeholder="Defaults to the report name"></div>
+    <div><label class="f" for="c-preset">Repeat</label><select id="c-preset">${CRON_PRESETS.map(([l,c]) => `<option value="${c}" ${c===s.cron?"selected":""}>${l}</option>`).join("")}<option value="" ${CRON_PRESETS.some(p => p[1]===s.cron)?"":"selected"}>Custom cron…</option></select></div>
+    <div><label class="f" for="c-cron">Cron expression</label><input type="text" id="c-cron" class="mono" value="${esc(s.cron)}">
+      <div class="hint">minute hour day-of-month month day-of-week</div></div>
+    <div class="grid2"><div><label class="f" for="c-keep">Results to keep</label><input type="number" id="c-keep" min="0" value="${esc(s.keep_last)}"><div class="hint">0 keeps everything.</div></div>
+      <div style="padding-top:26px"><label class="check"><input type="checkbox" id="c-csv" ${s.export_csv?"checked":""}>Write analysis CSVs each run, plus a running history file</label></div></div>
+  </div><div class="actions"><button data-close>Cancel</button><button class="primary" type="submit">${isNew ? "Create schedule" : "Save schedule"}</button></div></form>`, d => {
+    $("#c-preset", d).onchange = e => { if (e.target.value) $("#c-cron", d).value = e.target.value; else $("#c-cron", d).focus(); };
+    $("#c-cron", d).oninput = e => { $("#c-preset", d).value = CRON_PRESETS.some(p => p[1] === e.target.value.trim()) ? e.target.value.trim() : ""; };
+    $("#scf", d).onsubmit = async e => {
+      e.preventDefault();
+      const body = {definition_id: $("#c-def", d).value, name: $("#c-name", d).value.trim(), cron: $("#c-cron", d).value.trim(),
+        keep_last: +$("#c-keep", d).value || 0, export_csv: $("#c-csv", d).checked, enabled: s.enabled !== false};
+      await act(() => isNew ? api("/api/schedules", {method:"POST", body}) : api(`/api/schedules/${s.id}`, {method:"PUT", body}), isNew ? "Schedule created" : "Schedule saved");
+      dlg.close(); if (location.hash.includes("?new=")) location.hash = "#/schedules"; else renderSchedules();
+    };
+  });
+}
+
+// ---------------------------------------------------------------- objective planning
+let PCAT = null;
+const EFFECT_BADGE = {place: ["place", "Place"], confine: ["limit", "Confine"], exclude: ["limit", "Exclude"],
+  availability: ["protect", "Availability"], durability: ["protect", "Durability"], online: ["place", "Online"],
+  optimize_capacity: ["limit", "Capacity"], do_not_move: ["limit", "Don't move"], performance: ["place", "Performance"],
+  expression: ["none", "Expression"]};
+const PLACEMENT_EFFECTS = ["place", "confine", "exclude", "availability", "durability", "online", "optimize_capacity", "performance", "do_not_move"];
+const badges = effects => (effects || []).map(e => EFFECT_BADGE[e] ? `<span class="badge ${EFFECT_BADGE[e][0]}">${EFFECT_BADGE[e][1]}</span>` : "").join("")
+  || `<span class="badge none">No placement effect</span>`;
+const pct = v => v == null ? "—" : (v * 100).toFixed(v > 0.999 ? 4 : 1).replace(/\.?0+$/, "") + "%";
+
+async function renderPlans() {
+  const plans = await api("/api/plans");
+  view.innerHTML = `
+  <header class="page"><div><h1>Objectives</h1><p class="sub">Model share objectives before applying them: scan a share for the metadata your conditions use, add the cluster's volumes and objectives, and see how much space each volume would need.</p></div>
+    <button class="primary" id="new-plan">New plan</button></header>
+  <div class="panel">${plans.length ? `<div class="scroll"><table class="data"><thead><tr><th>Plan</th><th>Share and folder</th><th class="num">Objectives</th><th>Scan</th><th>Calculated</th><th></th></tr></thead><tbody>
+    ${plans.map(p => `<tr><td><a href="#/plan/${p.id}"><b>${esc(p.name)}</b></a></td><td>${esc(p.share_name || "Missing share")} <span class="mono">${esc(p.root)}</span></td>
+      <td class="num">${p.rows}</td><td>${p.scan.status ? statusPill(p.scan.status) + ` <span class="hint">${p.scan.files != null ? num(p.scan.files) + " files" : ""}</span>` : `<span class="hint">Not scanned</span>`}</td>
+      <td>${p.calculated ? when(p.calculated) : `<span class="hint">Not yet</span>`}</td>
+      <td><div class="row" style="justify-content:flex-end"><a class="btn ghost" href="#/plan/${p.id}">Open</a><button class="ghost danger" data-del="${p.id}">Delete</button></div></td></tr>`).join("")}
+  </tbody></table></div>` : `<div class="empty"><p>No plans yet. A plan models where a share's data would go under a set of objectives.</p><button class="primary" id="new-plan2">New plan</button></div>`}</div>`;
+  $$("#new-plan,#new-plan2").forEach(b => b.onclick = newPlanDialog);
+  $$("[data-del]").forEach(b => b.onclick = async () => { if (!confirm("Delete this plan and its scan?")) return;
+    await act(() => api(`/api/plans/${b.dataset.del}`, {method: "DELETE"}), "Plan deleted"); renderPlans(); });
+}
+
+async function newPlanDialog() {
+  const shares = await api("/api/shares");
+  if (!shares.length) { toast("Add a share first", true); location.hash = "#/shares"; return; }
+  openDialog(`<form id="npf"><h2>New plan</h2><div class="stack">
+    <div><label class="f" for="np-name">Name</label><input type="text" id="np-name" placeholder="Home share tiering" required></div>
+    <div><label class="f" for="np-share">Share</label><select id="np-share">${shares.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select></div>
+    <div><label class="f" for="np-root">Folder to model</label><div class="row" style="flex-wrap:nowrap"><input type="text" id="np-root" class="mono" value="/"><button type="button" id="np-browse">Browse…</button></div>
+      <div class="hint">Use / for the whole share.</div></div>
+  </div><div class="actions"><button data-close>Cancel</button><button class="primary" type="submit">Create plan</button></div></form>`, d => {
+    $("#np-browse", d).onclick = () => { const sid = $("#np-share", d).value, name = $("#np-name", d).value;
+      dlg.close(); browseDialog(sid, p => newPlanDialogRestore(name, sid, p)); };
+    $("#npf", d).onsubmit = async e => { e.preventDefault();
+      const p = await act(() => api("/api/plans", {method: "POST", body: {name: $("#np-name", d).value.trim(), share_id: $("#np-share", d).value, root: $("#np-root", d).value.trim() || "/"}}));
+      dlg.close(); location.hash = `#/plan/${p.id}`; };
+  });
+}
+function newPlanDialogRestore(name, sid, path) {
+  newPlanDialog().then(() => { $("#np-name", dlg).value = name; $("#np-share", dlg).value = sid; $("#np-root", dlg).value = path; });
+}
+
+async function renderPlan(id) {
+  if (!PCAT) PCAT = await api("/api/plan-catalog");
+  let P = await api(`/api/plans/${id}`);
+  const shares = await api("/api/shares");
+  let result = P.has_result ? await api(`/api/plans/${id}/result`).catch(() => null) : null;
+  let saveTimer = null, pending = {};
+
+  view.innerHTML = `
+  <header class="page"><div><h1 id="pl-title"></h1><p class="sub" id="pl-sub"></p></div>
+    <div class="row"><a class="btn" href="#/plans">All plans</a></div></header>
+  <div class="stack steps">
+    <section class="panel" id="s1"></section>
+    <section class="panel" id="s2"></section>
+    <section class="panel" id="s3"></section>
+    <section class="panel" id="s4"></section>
+    <section class="panel" id="s5"></section>
+    <div class="calc-bar"><button class="primary" id="pl-calc">Calculate space</button>
+      <span class="hint">Models placement for every scanned file with the objectives and assumptions above.</span></div>
+    <section class="panel" id="s6"></section>
+  </div>`;
+
+  const head = () => {
+    $("#pl-title").textContent = P.name;
+    $("#pl-sub").innerHTML = `${esc(P.share_name || "No share")} <span class="mono">${esc(P.root)}</span>`;
+  };
+  function save(patch, redraw = []) {
+    Object.assign(pending, patch); Object.assign(P, patch);
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      const body = pending; pending = {};
+      try {
+        const np = await api(`/api/plans/${id}`, {method: "PUT", body});
+        // The rows on screen are being edited: keep those objects; take everything else from the server.
+        P = {...np, ...pending, rows: P.rows};
+        drawChecks(); drawFieldsNotice();
+        redraw.forEach(f => f());
+      } catch (e) { toast(e.message, true); }
+    }, 450);
+  }
+
+  // ---- 1. share and folder
+  function draw1() {
+    $("#s1").innerHTML = `<h2><span class="n">1</span>Share and folder</h2>
+      <div class="grid2"><div><label class="f" for="p-name">Plan name</label><input type="text" id="p-name" value="${esc(P.name)}"></div>
+        <div><label class="f" for="p-cshare">Share name on the cluster</label><input type="text" id="p-cshare" class="mono" value="${esc(P.cluster_share || "")}">
+          <div class="hint">Used in the generated share-objective-add commands.</div></div></div>
+      <div class="grid2" style="margin-top:12px"><div><label class="f" for="p-share">Share</label><select id="p-share">${shares.map(s => `<option value="${s.id}" ${s.id === P.share_id ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></div>
+        <div><label class="f" for="p-root">Folder to model</label><div class="row" style="flex-wrap:nowrap"><input type="text" id="p-root" class="mono" value="${esc(P.root)}"><button type="button" id="p-browse">Browse…</button></div>
+          <div class="hint">Objective scopes and conditions are tested against everything below this folder. Changing it needs a new scan.</div></div></div>`;
+    $("#p-name").oninput = e => { save({name: e.target.value}); head(); };
+    $("#p-cshare").oninput = e => save({cluster_share: e.target.value});
+    $("#p-share").onchange = e => { save({share_id: e.target.value}); };
+    $("#p-root").onchange = e => save({root: e.target.value});
+    $("#p-browse").onclick = () => browseDialog($("#p-share").value, p => { $("#p-root").value = p; save({root: p}); });
+  }
+
+  // ---- 2. fields and scan
+  const KIND_GROUPS = [["bytes", "Sizes"], ["age", "Ages"], ["time", "Times"], ["typed:USER", "Ownership"], ["bool", "Flags"], ["text", "Names and paths"], ["labels", "Labels"]];
+  const kindGroup = k => k.startsWith("typed:") ? (k === "typed:USER" || k === "typed:GROUP" ? "typed:USER" : "text") : k;
+  function draw2() {
+    const sel = P.fields || [], metas = P.metas || [];
+    const scan = P.scan || {};
+    const avail = Object.entries(PCAT.fields).filter(([f]) => !sel.includes(f) && !PCAT.required.includes(f) && !PCAT.walk_fields.includes(f));
+    const changed = scan.fields && JSON.stringify([...PCAT.required, ...sel.filter(f => !PCAT.required.includes(f)), ...metas].filter(f => !PCAT.walk_fields.includes(f))) !== JSON.stringify(scan.fields);
+    $("#s2").innerHTML = `<h2><span class="n">2</span>Fields to gather, and scan</h2>
+      <p class="hint" style="margin-top:-6px">The scan walks the folder (names, paths and folders come from the walk) and asks hs only for these fields. Pick the ones your conditions use.</p>
+      <div class="chips" style="margin:8px 0">
+        ${PCAT.required.map(f => `<span class="chip" title="Always gathered: needed for the space calculation">${f}</span>`).join("")}
+        ${["NAME", "PATH", "IS_FILE"].map(f => `<span class="chip" style="background:#F0F2F5;border-color:var(--rule)" title="From the folder walk">${f}</span>`).join("")}
+        ${sel.filter(f => !PCAT.required.includes(f)).map(f => `<span class="chip">${f}<button aria-label="Remove ${f}" data-rmf="${f}">×</button></span>`).join("")}
+        ${metas.map(m => `<span class="chip">${esc(m)}<button aria-label="Remove ${esc(m)}" data-rmm="${esc(m)}">×</button></span>`).join("")}
+      </div>
+      <div id="fields-notice"></div>
+      <div class="row" style="align-items:flex-end">
+        <div><label class="f" for="add-field">Add a field</label><select id="add-field" style="width:260px"><option value="">Choose…</option>
+          ${KIND_GROUPS.map(([k, l]) => { const opts = avail.filter(([, v]) => kindGroup(v.kind) === k); return opts.length ? `<optgroup label="${l}">${opts.map(([f, v]) => `<option value="${f}">${f} · ${esc(v.label)}</option>`).join("")}</optgroup>` : ""; }).join("")}</select></div>
+        <div><label class="f" for="meta-fn">Tag, label, keyword or attribute</label><div class="row" style="flex-wrap:nowrap;gap:6px">
+          <select id="meta-fn" style="width:170px">${PCAT.meta_funcs.map(f => `<option>${f}</option>`).join("")}</select>
+          <input type="text" id="meta-name" placeholder="name" style="width:150px"><button type="button" id="meta-add">Add</button></div></div>
+        <div><label class="f" for="scan-speed">Crawl speed</label><select id="scan-speed" style="width:150px">
+          ${Object.entries(PCAT.throttle_presets).map(([k, v]) => `<option value="${k}" ${((P.throttle || {}).preset || "normal") === k ? "selected" : ""}>${v.label}</option>`).join("")}</select></div>
+        <span class="spacer"></span>
+        <button class="primary" id="scan-btn" ${scan.status === "running" ? "disabled" : ""}>${scan.status === "running" ? "Scanning…" : scan.status ? "Scan again" : "Scan"}</button>
+      </div>
+      <div style="margin-top:10px">${scanStatus(scan, changed)}</div>`;
+    $$("[data-rmf]").forEach(b => b.onclick = () => { save({fields: (P.fields || []).filter(f => f !== b.dataset.rmf)}); draw2(); });
+    $$("[data-rmm]").forEach(b => b.onclick = () => { save({metas: (P.metas || []).filter(m => m !== b.dataset.rmm)}); draw2(); });
+    $("#add-field").onchange = e => { if (!e.target.value) return; save({fields: [...(P.fields || []), e.target.value]}); draw2(); };
+    $("#meta-add").onclick = () => { const n = $("#meta-name").value.trim(); if (!n) return;
+      save({metas: [...(P.metas || []), `${$("#meta-fn").value}("${n.replace(/"/g, "")}")`]}); draw2(); };
+    $("#scan-speed").onchange = e => save({throttle: {preset: e.target.value}});
+    $("#scan-btn").onclick = async () => {
+      clearTimeout(saveTimer); if (Object.keys(pending).length) { await api(`/api/plans/${id}`, {method: "PUT", body: pending}); pending = {}; }
+      await act(() => api(`/api/plans/${id}/scan`, {method: "POST"})); poll();
+    };
+    drawFieldsNotice();
+  }
+  function scanStatus(s, changed) {
+    if (!s.status) return `<p class="hint" style="margin:0">Not scanned yet.</p>`;
+    if (s.status === "running") return `<p class="status-line">${statusPill("running")} ${s.phase === "walking" || s.phase === "starting" ? `Walking folders${s.found ? ` (${num(s.found)} entries so far)` : ""}…` : `Gathering metadata: ${num(s.done || 0)} of ${num(s.files || 0)} files…`}</p>`;
+    if (s.status === "failed") return `<div class="errbox">${esc(s.error || "Scan failed")}</div>`;
+    return `<p class="status-line">${statusPill(s.status)} ${num(s.files)} files in ${num(s.folders)} folders, ${bytes(s.bytes)} · scanned ${when(s.finished)} · ${esc(s.method || "")}
+      ${s.status === "partial" ? ` · <b>${num(s.files - s.gathered)} files had no metadata</b>` : ""}
+      ${changed ? ` · <b style="color:#8A6400">Fields changed since this scan; scan again to use them.</b>` : ""}</p>
+      ${s.truncated ? `<p class="hint">Stopped at HSR_PLAN_MAX_FILES entries.</p>` : ""}
+      ${(s.error_samples || []).length ? `<details><summary class="hint">hs messages</summary><pre class="raw">${esc(s.error_samples.join("\n\n"))}</pre></details>` : ""}`;
+  }
+  function drawFieldsNotice() {
+    const el = $("#fields-notice"); if (!el) return;
+    const need = P.needed || {fields: [], metas: []};
+    const missF = need.fields.filter(f => !(P.fields || []).includes(f) && !PCAT.required.includes(f));
+    const missM = need.metas.filter(m => !(P.metas || []).includes(m));
+    el.innerHTML = missF.length || missM.length ? `<div class="wlist"><li class="warn" style="list-style:none">Your conditions use ${[...missF, ...missM].map(esc).join(", ")}, which ${missF.length + missM.length > 1 ? "aren't" : "isn't"} selected.
+      <button class="ghost" id="add-needed">Add ${missF.length + missM.length > 1 ? "them" : "it"}</button></li></div>` : "";
+    $("#add-needed") && ($("#add-needed").onclick = () => { save({fields: [...(P.fields || []), ...missF], metas: [...(P.metas || []), ...missM]}); setTimeout(draw2, 50); });
+  }
+  let pollTimer2 = null;
+  async function poll() {
+    clearTimeout(pollTimer2);
+    if (!location.hash.startsWith(`#/plan/${id}`)) return;
+    P = await api(`/api/plans/${id}`);
+    draw2();
+    if (P.scan && P.scan.status === "running") pollTimer2 = setTimeout(poll, 1500);
+    else { drawChecks(); refreshAllChecks(); }
+  }
+
+  // ---- 3. cluster information
+  const UPLOADS = [["volumes", "volume-list --full", "Storage volumes"], ["object_volumes", "object-volume-list --full", "Object volumes"],
+    ["volume_groups", "volume-group-list --full", "Volume groups"], ["objectives", "objective-list --full", "Objectives"]];
+  function draw3() {
+    const c = P.cluster || {}, up = c.uploaded || {};
+    const vols = [...(c.volumes || []), ...(c.object_volumes || [])];
+    $("#s3").innerHTML = `<h2><span class="n">3</span>Cluster information</h2>
+      <p class="hint" style="margin-top:-6px">Upload or paste the output of these Hammerspace CLI commands. The kind is detected from the contents.</p>
+      <div class="upl">${UPLOADS.map(([k, cmd, label]) => `<div class="card ${c[k] ? "ok" : ""}"><b>${label}</b><div><code>${cmd}</code></div>
+        <div class="status-line">${c[k] ? `${c[k].length} loaded · ${when(up[k])}` : "Not loaded"}</div>
+        <div class="row" style="margin-top:6px;gap:6px"><label class="btn" style="min-height:28px;padding:3px 10px">Upload file<input type="file" data-up="${k}" hidden accept=".txt,text/plain"></label>
+          <button style="min-height:28px;padding:3px 10px" data-paste="${k}">Paste</button>${c[k] ? `<button class="ghost danger" style="min-height:28px" data-clear="${k}">Clear</button>` : ""}</div></div>`).join("")}</div>
+      ${vols.length ? `<h3 style="margin-top:14px">Volumes</h3><div class="scroll"><table class="data"><thead><tr><th>Volume</th><th>Type</th><th>Storage system</th><th>Access</th><th class="num">Free</th><th class="num">Total</th><th class="num">Availability</th><th class="num">Durability</th><th>Online delay</th><th>Groups</th></tr></thead><tbody>
+        ${vols.map(v => `<tr class="${v.read_only ? "muted" : ""}"><td><b>${esc(v.name)}</b></td><td>${v.kind === "object" ? "Object" : "Storage"}</td><td>${esc(v.node)}</td>
+          <td>${v.read_only ? `<span class="pill warn">Read-only</span>` : esc(v.access)}</td><td class="num">${v.free == null ? "Unlimited" : bytes(v.free)}</td><td class="num">${v.total == null ? "Unlimited" : bytes(v.total)}</td>
+          <td class="num">${pct(v.availability)}</td><td class="num">${pct(v.durability)}</td><td>${v.online_delay === 0 ? "Online" : v.online_delay == null ? "—" : Math.round(v.online_delay / 60) + " min"}</td>
+          <td class="hint">${(v.groups || []).map(esc).join(", ")}</td></tr>`).join("")}</tbody></table></div>` : ""}
+      ${(c.volume_groups || []).length ? `<details style="margin-top:10px"><summary class="hint">Volume groups (${c.volume_groups.length})</summary><ul class="msgs">${c.volume_groups.map(g => `<li><b>${esc(g.name)}</b>: ${g.volumes.length ? g.volumes.map(esc).join(", ") : `<span class="hint">no volumes</span>`}</li>`).join("")}</ul></details>` : ""}`;
+    const upload = async (text, slot) => {
+      const r = await act(() => api(`/api/plans/${id}/cluster`, {method: "POST", body: {text}}));
+      P = r.plan; toast(`Loaded ${r.count} ${UPLOADS.find(u => u[0] === r.kind)[2].toLowerCase()}` + (r.kind !== slot ? " (detected from the contents)" : ""));
+      draw3(); draw4(); draw5(); drawChecks();
+    };
+    $$("[data-up]").forEach(inp => inp.onchange = async () => { const f = inp.files[0]; if (f) upload(await f.text(), inp.dataset.up); });
+    $$("[data-paste]").forEach(b => b.onclick = () => openDialog(`<form id="pf"><h2>Paste ${UPLOADS.find(u => u[0] === b.dataset.paste)[1]}</h2>
+      <textarea id="pt" style="min-height:280px" placeholder="Paste the command's output here"></textarea>
+      <div class="actions"><button data-close>Cancel</button><button class="primary" type="submit">Load</button></div></form>`, d => {
+        $("#pf", d).onsubmit = async e => { e.preventDefault(); const t = $("#pt", d).value; dlg.close(); upload(t, b.dataset.paste); }; }, "min(820px,94vw)"));
+    $$("[data-clear]").forEach(b => b.onclick = async () => { P = await api(`/api/plans/${id}/cluster/${b.dataset.clear}`, {method: "DELETE"}); draw3(); draw4(); draw5(); });
+  }
+
+  // ---- 4. objectives
+  const objectives = () => (P.cluster || {}).objectives || [];
+  const OP_SETS = {pathlike: ["matches", "doesn't match", "==", "!="], bytes: ["<", "<=", ">", ">=", "=="], age: [">", ">=", "<", "<="], time: ["<", ">"], text: ["==", "!="], labels: ["has"], bool: ["is TRUE", "is FALSE"]};
+  const UNIT_SETS = {bytes: ["BYTES", "KBYTES", "MBYTES", "GBYTES", "TBYTES"], age: ["MINUTES", "HOURS", "DAYS", "WEEKS", "MONTHS", "YEARS"]};
+  function fieldKind(f) {
+    if (f === "NAME" || f === "PATH" || f === "DPATH") return "pathlike";
+    if (f.startsWith("HAS_")) return "bool";
+    if (f.startsWith("GET_")) return "text";
+    const k = (PCAT.fields[f] || {}).kind || "text";
+    return k.startsWith("typed:") ? "text" : k;
+  }
+  function builderExpr(field, op, val, unit) {
+    const k = fieldKind(field), typed = ((PCAT.fields[field] || {}).kind || "").startsWith("typed:") ? PCAT.fields[field].kind.slice(6) : null;
+    if (k === "bool") return op === "is FALSE" ? `NOT ${field}` : field;
+    if (k === "pathlike" && (op === "matches" || op === "doesn't match")) {
+      if (!val) throw new Error(field === "NAME" ? "Enter a pattern like *.log" : "Enter a pattern like */scratch/*");
+      return `${op === "doesn't match" ? "!" : ""}FNMATCH('${val.replace(/'/g, "")}', ${field})?TRUE`;
+    }
+    if (k === "labels") return `HAS_LABEL("${val.replace(/"/g, "")}")`;
+    if (val === "") throw new Error("Enter a value");
+    if (k === "bytes" || k === "age") { if (isNaN(+val)) throw new Error("Enter a number"); return `${field}${op}${+val}*${unit}`; }
+    if (k === "time") return `${field}${op}LOCAL_TIME('${val}')`;
+    if (typed) return `${field}${op}${typed}('${val.replace(/'/g, "")}')`;
+    return `${field}${op}"${val.replace(/"/g, '\\"')}"`;
+  }
+  function draw4() {
+    const objs = objectives(), rows = P.rows || [];
+    const groups = [["Placement", o => o.effects.some(e => ["place", "confine", "exclude", "online", "optimize_capacity", "do_not_move", "performance"].includes(e))],
+      ["Protection", o => o.effects.some(e => ["availability", "durability"].includes(e))], ["Other", () => true]];
+    const used = new Set();
+    const objOptions = sel => groups.map(([label, test]) => { const list = objs.filter(o => !used.has(o.name) && test(o)); list.forEach(o => used.add(o.name));
+      return list.length ? `<optgroup label="${label}">${list.map(o => `<option value="${esc(o.name)}" ${o.name === sel ? "selected" : ""}>${esc(o.name)}</option>`).join("")}</optgroup>` : ""; }).join("");
+    const fieldsAvail = [...new Set([...PCAT.required, ...(P.fields || []), ...(P.metas || []), "NAME", "PATH"])];
+    $("#s4").innerHTML = `<h2><span class="n">4</span>Share objectives</h2>
+      <p class="hint" style="margin-top:-6px">Each objective applies to the whole share, a folder, or one file, and optionally only to files matching a condition. Several objectives can apply to the same file; placement and availability objectives can each add an instance.</p>
+      ${objs.length ? "" : `<p class="errbox">Load objective-list --full in step 3 to choose objectives.</p>`}
+      <div id="orows">${rows.map((r, i) => { used.clear(); const o = objs.find(x => x.name === r.objective);
+        return `<div class="orow" data-row="${r.id}">
+        <div class="head"><span class="num">${i + 1}</span>
+          ${objs.length ? `<select data-k="objective" style="width:auto;min-width:280px"><option value="">Choose an objective…</option>${objOptions(r.objective)}</select>` : `<input type="text" data-k="objective" value="${esc(r.objective)}" style="width:280px">`}
+          <span>${o ? badges(o.effects) : ""}</span><span class="spacer"></span><button class="ghost danger" data-rm="${r.id}">Remove</button></div>
+        ${o && o.description ? `<p class="hint" style="margin:4px 0 0 32px">${esc(o.description)}</p>` : ""}
+        <div class="grid3"><div><label class="f">Applies to</label><select data-k="scope.type">${[["share", "Whole share"], ["folder", "A folder"], ["file", "One file"]].map(([v, l]) => `<option value="${v}" ${(r.scope || {}).type === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+          <div ${((r.scope || {}).type || "share") === "share" ? "hidden" : ""}><label class="f">Folder</label><div class="row" style="flex-wrap:nowrap;gap:6px"><input type="text" class="mono" data-k="scope.path" value="${esc((r.scope || {}).path || "")}" placeholder="/projects/2026"><button type="button" data-pick="${r.id}">Browse…</button></div></div>
+          <div ${(r.scope || {}).type === "file" ? "" : "hidden"}><label class="f">File name</label><input type="text" data-k="scope.name" value="${esc((r.scope || {}).name || "")}"></div></div>
+        <div style="margin-top:10px"><label class="f">Condition <span class="hint" style="font-weight:400">(optional; leave empty to apply to every file in scope)</span></label>
+          <div data-ed="${r.id}"></div><div class="status-line" data-st="${r.id}"></div>
+          <div class="builder"><select data-b="join" aria-label="Combine with the condition above" hidden><option>AND</option><option>OR</option></select>
+            <select data-b="field" aria-label="Field"><option value="">Choose a field…</option>${fieldsAvail.map(f => `<option>${esc(f)}</option>`).join("")}</select>
+            <select data-b="op" aria-label="Operator" hidden></select><input type="text" data-b="val" aria-label="Value" placeholder="value" style="width:120px" hidden><select data-b="unit" aria-label="Unit" hidden></select>
+            <button type="button" data-b="add" disabled>Add condition</button>
+            <button type="button" class="ghost danger" data-b="clear" hidden>Clear condition</button></div></div>
+        <ul class="msgs" data-msgs="${r.id}"></ul></div>`; }).join("")}</div>
+      <div class="row" style="margin-top:10px"><button id="add-row">Add objective</button></div>`;
+    const rowById = rid => (P.rows || []).find(r => r.id === rid);
+    const saveRows = () => save({rows: P.rows});
+    $("#add-row").onclick = () => { P.rows = [...(P.rows || []), {id: "n" + Date.now().toString(36), objective: "", scope: {type: "share"}, condition: ""}]; saveRows(); draw4(); };
+    $$("[data-rm]").forEach(b => b.onclick = () => { P.rows = P.rows.filter(r => r.id !== b.dataset.rm); saveRows(); draw4(); });
+    $$(".orow").forEach(el => {
+      const r = rowById(el.dataset.row);
+      $$("[data-k]", el).forEach(inp => inp.addEventListener(inp.tagName === "SELECT" ? "change" : "input", () => {
+        const k = inp.dataset.k;
+        if (k.startsWith("scope.")) { r.scope = {...(r.scope || {type: "share"}), [k.slice(6)]: inp.value}; } else r[k] = inp.value;
+        saveRows();
+        if (k === "objective" || k === "scope.type") draw4(); else check(r);
+      }));
+      $("[data-pick]", el) && ($("[data-pick]", el).onclick = () => folderPicker(p => { r.scope = {...r.scope, path: p}; $("[data-k='scope.path']", el).value = p; saveRows(); check(r); }));
+      const ed = codeEditor($(`[data-ed="${r.id}"]`, el), {value: r.condition || "", light: true, label: "Condition",
+        onInput: v => { r.condition = v; saveRows(); check(r); el._syncJoin && el._syncJoin(); }});
+      el._ed = ed;
+      // builder
+      const bf = $("[data-b=field]", el), bo = $("[data-b=op]", el), bv = $("[data-b=val]", el), bu = $("[data-b=unit]", el);
+      const bj = $("[data-b=join]", el), badd = $("[data-b=add]", el), bclr = $("[data-b=clear]", el);
+      // The AND/OR choice only appears once there's a condition to combine with.
+      const syncJoin = () => { const has = !!(r.condition || "").trim();
+        bj.hidden = !has; bclr.hidden = !has; badd.textContent = has ? "Add" : "Add condition"; };
+      el._syncJoin = syncJoin;
+      const syncOps = () => {
+        const chosen = !!bf.value;
+        badd.disabled = !chosen;
+        if (!chosen) { bo.hidden = bv.hidden = bu.hidden = true; return; }
+        const k = fieldKind(bf.value);
+        bo.hidden = false;
+        bo.innerHTML = (OP_SETS[k] || OP_SETS.text).map(o => `<option>${esc(o)}</option>`).join("");
+        bu.innerHTML = (UNIT_SETS[k] || []).map(u => `<option ${u === "DAYS" || u === "MBYTES" ? "selected" : ""}>${u}</option>`).join("");
+        bu.hidden = !UNIT_SETS[k]; bv.hidden = k === "bool";
+        bv.placeholder = k === "pathlike" ? (bf.value === "NAME" ? "*.log" : "*/scratch/*") : k === "time" ? "2026-01-31" : k === "labels" ? "label name" : ((PCAT.fields[bf.value] || {}).kind || "").startsWith("typed:") ? "name@domain" : "value"; };
+      bf.onchange = () => { syncOps(); if (!bv.hidden) bv.focus(); }; syncOps(); syncJoin();
+      const setCondition = text => { const ta = $(`[data-ed="${r.id}"] textarea`, el); ta.value = text; ta.dispatchEvent(new Event("input")); };
+      const addExpr = () => { let e;
+        try { e = builderExpr(bf.value, bo.value, bv.value.trim(), bu.value); } catch (err) { toast(err.message, true); bv.focus(); return; }
+        const cur = (r.condition || "").trim();
+        const wrap = x => x.includes("?") ? `(${x})` : x;  // keep a ternary like FNMATCH(...)?TRUE self-contained
+        setCondition(cur ? `${wrap(cur)} ${bj.value} ${wrap(e)}` : e);
+        // start the next entry from scratch
+        bf.value = ""; bv.value = ""; bj.value = "AND"; syncOps(); syncJoin(); bf.focus(); };
+      badd.onclick = addExpr;
+      bv.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); addExpr(); } };
+      bclr.onclick = () => { setCondition(""); syncJoin(); };
+      check(r);
+    });
+    drawChecks();
+  }
+  const checkTimers = {};
+  function check(r) {
+    clearTimeout(checkTimers[r.id]);
+    checkTimers[r.id] = setTimeout(async () => {
+      const st = $(`[data-st="${r.id}"]`); if (!st) return;
+      const ed = $(`[data-ed="${r.id}"]`);
+      try {
+        const c = await api(`/api/plans/${id}/check`, {method: "POST", body: {condition: r.condition || "", scope: r.scope}});
+        ed && ed.classList.toggle("bad", !c.ok);
+        if (!c.ok) { st.className = "status-line bad"; st.textContent = c.error; return; }
+        if (c.not_scanned.length) { st.className = "status-line bad"; st.textContent = `Not gathered by the scan: ${c.not_scanned.join(", ")}. Add ${c.not_scanned.length > 1 ? "them" : "it"} in step 2 and scan again.`; return; }
+        st.className = "status-line ok";
+        st.textContent = c.matches ? `✓ Matches ${num(c.matches.files)} files (${bytes(c.matches.bytes)})` + (c.matches.examples.length ? `, e.g. ${c.matches.examples.slice(0, 2).join(", ")}` : "") : (r.condition ? "✓ Valid. Scan the share to see what it matches." : "");
+      } catch (e) { st.className = "status-line bad"; st.textContent = e.message; }
+    }, 300);
+  }
+  function refreshAllChecks() { (P.rows || []).forEach(check); }
+  function drawChecks() {
+    (P.checks || []).forEach(c => { const ul = $(`[data-msgs="${c.id}"]`); if (!ul) return;
+      ul.innerHTML = [...c.errors.map(e => `<li class="err">${esc(e)}</li>`), ...c.warnings.map(w => `<li class="warn">${esc(w)}</li>`), ...(c.notes ? [`<li class="note">${esc(c.notes)}</li>`] : [])].join(""); });
+  }
+  function folderPicker(onPick) {
+    let cur = "/";
+    openDialog(`<div class="body"><h2>Choose a folder</h2><p class="hint" style="margin-top:-6px">From the scan, relative to ${esc(P.root)}.</p><div class="crumbs" id="fp-c"></div><div class="dirlist" id="fp-l"></div>
+      <div class="actions"><button data-close>Cancel</button><button class="primary" id="fp-ok">Choose</button></div></div>`, d => {
+      const load = async p => { const r = await api(`/api/plans/${id}/folders?path=${encodeURIComponent(p)}`); cur = r.path;
+        const parts = cur.split("/").filter(Boolean);
+        $("#fp-c", d).innerHTML = `<button data-p="/">${esc(P.root)}</button>` + parts.map((x, i) => `/<button data-p="/${parts.slice(0, i + 1).map(esc).join("/")}">${esc(x)}</button>`).join("");
+        $("#fp-l", d).innerHTML = (cur !== "/" ? `<button data-p="${esc("/" + parts.slice(0, -1).join("/"))}">..</button>` : "") + (r.dirs.map(x => `<button data-p="${esc((cur === "/" ? "" : cur) + "/" + x)}">${esc(x)}/</button>`).join("") || `<p class="hint" style="padding:10px 12px;margin:0">No subfolders${P.scan ? "" : " (scan the share first)"}.</p>`);
+        $$("[data-p]", d).forEach(b => b.onclick = () => load(b.dataset.p)); $("#fp-ok", d).textContent = `Choose ${cur}`; };
+      load("/"); $("#fp-ok", d).onclick = () => { onPick(cur); dlg.close(); };
+    });
+  }
+
+  // ---- 5. settings
+  function draw5() {
+    const s = P.settings || {}, c = P.cluster || {};
+    const groupsList = (c.volume_groups || []).map(g => g.name), volsList = [...(c.volumes || []), ...(c.object_volumes || [])].map(v => v.name);
+    const dp = s.default_placement ? `${s.default_placement.kind}:${s.default_placement.name}` : "";
+    $("#s5").innerHTML = `<h2><span class="n">5</span>Placement assumptions</h2>
+      <div class="grid2" style="grid-template-columns:repeat(3,1fr)">
+        <div><label class="f" for="st-dp">Files no placement objective covers go to</label><select id="st-dp"><option value="">Any writable storage volume</option>
+          ${groupsList.length ? `<optgroup label="Volume groups">${groupsList.map(g => `<option value="group:${esc(g)}" ${dp === "group:" + g ? "selected" : ""}>${esc(g)}</option>`).join("")}</optgroup>` : ""}
+          ${volsList.length ? `<optgroup label="Volumes">${volsList.map(v => `<option value="volume:${esc(v)}" ${dp === "volume:" + v ? "selected" : ""}>${esc(v)}</option>`).join("")}</optgroup>` : ""}</select></div>
+        <div><label class="f" for="st-min">Kept in metadata on object volumes when smaller than</label><div class="row" style="flex-wrap:nowrap"><input type="number" id="st-min" min="0" value="${esc(s.object_min_bytes ?? 40)}" style="flex:1"><span>bytes</span></div></div>
+        <div><label class="f" for="st-basis">Space on storage volumes</label><select id="st-basis"><option value="size" ${s.size_basis !== "space_used" ? "selected" : ""}>Size, rounded up to 4 KiB blocks</option><option value="space_used" ${s.size_basis === "space_used" ? "selected" : ""}>SPACE_USED as reported</option></select></div></div>
+      <label class="check" style="margin-top:10px"><input type="checkbox" id="st-local" ${s.keep_local_without_optimize !== false ? "checked" : ""}>Keep a local (storage volume) instance unless optimize-for-capacity applies</label>
+      <p class="hint" style="margin:6px 0 0">This is a model of Hammerspace's placement, not the cluster's own engine: each place-on objective adds an instance in its target, availability and durability objectives add instances on separate storage systems until the target is met, read-only volumes are never targets, and within a group each instance goes to the volume with the most free space left.</p>`;
+    const set = patch => save({settings: {...(P.settings || {}), ...patch}});
+    $("#st-dp").onchange = e => { const [k, ...n] = e.target.value.split(":"); set({default_placement: e.target.value ? {kind: k, name: n.join(":")} : null}); };
+    $("#st-min").oninput = e => set({object_min_bytes: +e.target.value || 0});
+    $("#st-basis").onchange = e => set({size_basis: e.target.value});
+    $("#st-local").onchange = e => set({keep_local_without_optimize: e.target.checked});
+  }
+
+  // ---- 6. results
+  function draw6() {
+    const el = $("#s6");
+    if (!result) { el.innerHTML = `<h2><span class="n">6</span>Space by volume</h2><p class="hint" style="margin:0">Scan the share, load the cluster information and add objectives, then <b>Calculate space</b>.</p>`; return; }
+    const r = result, rowsById = Object.fromEntries((P.rows || []).map((x, i) => [x.id, [i + 1, x]]));
+    const copies = Object.entries(r.copies).map(([k, v]) => `${num(v)} × ${k} ${+k === 1 ? "instance" : "instances"}`).join(", ") || "—";
+    const sugg = r.uncovered && r.uncovered.suggestion;
+    el.innerHTML = `<h2><span class="n">6</span>Space by volume <span class="hint" style="font-weight:400">· calculated ${when(r.calculated)}</span></h2>
+      <div class="stats">
+        <div class="stat"><b>${num(r.files)}</b><span>files modeled</span></div>
+        <div class="stat"><b>${bytes(r.bytes)}</b><span>logical size</span></div>
+        <div class="stat"><b>${num(r.instances)}</b><span>instances</span></div>
+        <div class="stat"><b>${bytes(r.projected)}</b><span>space needed across volumes</span></div>
+        <div class="stat"><b>${num(r.metadata_files)}</b><span>small files kept in metadata</span></div>
+        ${r.unchanged_files ? `<div class="stat"><b>${num(r.unchanged_files)}</b><span>files not moved (do-not-move), ${bytes(r.unchanged_bytes)}</span></div>` : ""}
+      </div>
+      <p class="hint">Instances per file: ${copies}.</p>
+      ${r.warnings.length ? `<ul class="wlist">${r.warnings.map(w => `<li class="${w.level}">${esc(w.text)}
+        ${w.kind === "coverage" && w.level === "warn" ? `${r.uncovered.examples.length ? `<div class="hint">For example: <span class="mono">${r.uncovered.examples.slice(0, 5).map(esc).join(", ")}</span></div>` : ""}
+          ${sugg ? `<div class="row" style="margin-top:6px;gap:6px"><span class="hint">Catch-all condition:</span><code>${esc(sugg)}</code>
+            <select id="sugg-obj" style="width:auto;min-height:28px;padding:2px 6px">${objectives().filter(o => o.effects.some(e => PLACEMENT_EFFECTS.includes(e))).map(o => `<option>${esc(o.name)}</option>`).join("")}</select><button id="sugg-add" style="min-height:28px">Add as an objective</button></div>` : ""}` : ""}
+        ${w.examples ? `<div class="hint mono">${w.examples.map(esc).join(", ")}</div>` : ""}</li>`).join("")}</ul>` : ""}
+      ${targetsTable(r)}
+      <h3 style="margin-top:14px">Files each objective applies to</h3>
+      <table class="data"><tbody>${r.rows.map(x => { const [n, row] = rowsById[x.id] || ["?", {}]; return `<tr><td style="width:40px">${n}</td><td><b>${esc(row.objective || "")}</b> <span class="hint">${esc(row.condition || "")}</span></td><td class="num">${num(x.files)} files</td><td class="num">${bytes(x.bytes)}</td></tr>`; }).join("")}</tbody></table>
+      <h3 style="margin-top:14px">Commands to apply this plan</h3>
+      <div class="query"><pre id="cmds">${esc((r.commands || []).join("\n")) || "# Add objectives to generate commands"}</pre>
+        <div class="row"><button id="cmd-copy">Copy</button><a class="btn" href="/api/plans/${id}/commands">Download</a>
+          <span class="hint" style="color:#A9BBD6">One share-objective-add per objective: --path for a folder or file, and the condition as --applicability.</span></div></div>`;
+    $$("[data-exp]").forEach(b => b.onclick = () => {
+      const open = b.getAttribute("aria-expanded") !== "true";
+      b.setAttribute("aria-expanded", open); b.textContent = open ? "Hide volumes" : "Show volumes";
+      $$(`tr[data-of="${b.dataset.exp}"]`).forEach(tr => tr.hidden = !open);
+    });
+    $("#cmd-copy") && ($("#cmd-copy").onclick = () => navigator.clipboard.writeText($("#cmds").textContent).then(() => toast("Copied")));
+    $("#sugg-add") && ($("#sugg-add").onclick = () => { P.rows = [...(P.rows || []), {id: "n" + Date.now().toString(36), objective: $("#sugg-obj").value, scope: {type: "share"}, condition: sugg}];
+      save({rows: P.rows}); draw4(); toast("Added. Calculate again to update the results."); $("#s4").scrollIntoView({behavior: "smooth"}); });
+  }
+
+  function targetsTable(r) {
+    const vols = Object.fromEntries((r.volumes || []).map(v => [v.name, v]));
+    const share = (need, free, over) => free == null ? `<span class="hint">Unlimited</span>`
+      : `<div class="row" style="flex-wrap:nowrap;gap:8px"><div class="pbar ${over ? "over" : ""}" style="flex:1"><i style="width:${Math.min(100, need / free * 100).toFixed(1)}%"></i></div><span class="hint">${(need / free * 100).toFixed(need / free < .01 ? 2 : 1)}%</span></div>`;
+    const kindLabel = t => t.kind === "group" ? `Volume group · ${t.members.length} ${t.members.length === 1 ? "volume" : "volumes"}` : (t.volume_kind === "object" ? "Object volume" : "Storage volume");
+    // Results from before targets existed: one row per volume
+    const targets = r.targets || (r.volumes || []).filter(v => !v.excluded).map(v => ({kind: "volume", name: v.name, volume_kind: v.kind, node: v.node, members: [v.name], free: v.free, projected: v.projected, instances: v.instances, over: v.over}));
+    const rows = targets.map((t, i) => `
+      <tr><td><b>${esc(t.name)}</b>${t.kind === "group" ? `<button class="expand" data-exp="${i}" aria-expanded="false">Show volumes</button>` : ""}</td>
+        <td>${kindLabel(t)}</td><td>${t.kind === "group" ? (() => { const n = new Set(t.members.map(m => (vols[m] || {}).node || m)).size;
+          return `<span class="hint">${n} storage ${n === 1 ? "system" : "systems"}</span>`; })() : esc(t.node || "")}</td>
+        <td class="num">${t.free == null ? "Unlimited" : bytes(t.free)}</td><td class="num"><b>${bytes(t.projected)}</b></td>
+        <td>${share(t.projected, t.free, t.over)}</td><td class="num">${num(t.instances)}</td></tr>
+      ${t.kind === "group" ? t.members.map(m => { const v = vols[m] || {}; return `<tr class="member" data-of="${i}" hidden>
+        <td>${esc(m)}</td><td>${v.kind === "object" ? "Object volume" : "Storage volume"}</td><td>${esc(v.node || "")}</td>
+        <td class="num">${v.free == null ? "Unlimited" : bytes(v.free)}</td><td class="num">${bytes(v.projected || 0)}</td>
+        <td>${share(v.projected || 0, v.free, v.over)}</td><td class="num">${num(v.instances || 0)}</td></tr>`; }).join("") : ""}`).join("");
+    const nt = r.not_targets || [];
+    return `<div class="scroll"><table class="data" id="tgt-table"><thead><tr><th>Placed on</th><th>Type</th><th>Storage system</th><th class="num">Free now</th><th class="num">Needed for this share</th><th style="min-width:140px">Share of free space</th><th class="num">Instances</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+      <p class="hint" style="margin:6px 0 0">Volume groups the plan places data on are shown as one row: free space is the total across the group's writable volumes, and copies kept for other reasons (a local copy, an extra availability copy) count toward the group their volume is in. Volumes in more than one group can count toward each group's free space.${nt.length ? ` Not used as targets: ${nt.map(v => esc(v.name) + (v.read_only ? " (read-only)" : "")).join(", ")}.` : ""}</p>`;
+  }
+
+  $("#pl-calc").onclick = async () => {
+    clearTimeout(saveTimer);
+    if (Object.keys(pending).length) { const body = pending; pending = {}; P = await api(`/api/plans/${id}`, {method: "PUT", body}); drawChecks(); }
+    const b = $("#pl-calc"); b.disabled = true; b.textContent = "Calculating…";
+    try { result = await api(`/api/plans/${id}/calculate`, {method: "POST"}); draw6(); $("#s6").scrollIntoView({behavior: "smooth"}); }
+    catch (e) { toast(e.message, true); }
+    finally { b.disabled = false; b.textContent = "Calculate space"; }
+  };
+
+  head(); draw1(); draw2(); draw3(); draw4(); draw5(); draw6();
+  if (P.scan && P.scan.status === "running") poll();
+}
+
+
+route();
+</script>
+</body>
+</html>

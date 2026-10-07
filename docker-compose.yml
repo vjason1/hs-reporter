@@ -1,0 +1,39 @@
+services:
+  hs-reporter:
+    build: .
+    image: hs-reporter:latest
+    container_name: hs-reporter
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: "America/New_York"          # schedules run in this time zone
+      HSR_USER: "admin"               # remove both to disable sign-in
+      HSR_PASSWORD: "change-me"
+      HSR_MAX_CONCURRENT: "2"         # reports allowed to run at once
+      HSR_MAX_HS_PROCESSES: "4"       # hs commands at once across all reports (lower to protect the cluster)
+      HSR_RUN_TIMEOUT: "3600"         # seconds before a run is killed
+      HSR_MAX_OUTPUT_MB: "50"         # cap on captured hs output per path
+      # Default mount options when a share's options field is left blank:
+      HSR_NFS_OPTIONS: "vers=3,nolock"   # use "vers=4.2" on hosts with an approved kernel
+      HSR_SMB_OPTIONS: "vers=3.0,noserverino,cache=none,actimeo=0"
+    volumes:
+      - hsr-data:/data
+      # Option B: shares already mounted on the Docker host.
+      # rslave lets host mounts made after startup show up inside.
+      # - type: bind
+      #   source: /mnt/hammerspace
+      #   target: /mnt/external
+      #   bind: { propagation: rslave }
+    # Option A: let the container mount NFS/SMB shares itself.
+    # Remove these three blocks if you only use host-mounted shares.
+    cap_add:
+      - SYS_ADMIN
+      - DAC_READ_SEARCH
+    security_opt:
+      - apparmor:unconfined
+    # If mounts still fail with "permission denied", use this instead:
+    # privileged: true
+
+volumes:
+  hsr-data:
