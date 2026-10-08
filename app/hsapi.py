@@ -13,8 +13,9 @@ Lists are paged with page / page.size. Availability and durability are counts of
 has `node`, a volume location has `storageVolume`, and a volume group is a location itself;
 they're recognized by those fields, with `_type` and `uoid.objectType` as fallbacks.
 
-Connection settings live in <data>/cluster-api.json (0600). The last raw responses are kept
-in <data>/cluster-api-responses.json so a mapping problem can be diagnosed.
+Each linked cluster is a record in <data>/clusters.json (0600): name, address, port, API path,
+username, optional saved password and TLS verification. The last raw responses for each cluster
+are kept in <data>/cluster-api-responses/<cluster id>.json so a mapping problem can be diagnosed.
 """
 import json
 import os
@@ -24,42 +25,48 @@ import httpx
 
 from . import clusterinfo, store
 
-PATH = store.DATA_DIR / "cluster-api.json"
-RAW_PATH = store.DATA_DIR / "cluster-api-responses.json"
-DEFAULTS = {"host": "", "port": 8443, "username": "admin", "password": "", "verify_tls": False,
+LEGACY_PATH = store.DATA_DIR / "cluster-api.json"          # the single connection before 1.3
+RAW_DIR = store.DATA_DIR / "cluster-api-responses"
+DEFAULTS = {"name": "", "host": "", "port": 8443, "username": "admin", "password": "", "verify_tls": False,
             "base_path": "/mgmt/v1.2/rest"}
 PAGE_SIZE = 500
 _lock = threading.RLock()
 _transport = None   # tests swap in a fake API
+clusters = store.Collection("clusters")
 
 
 class ApiError(Exception):
     pass
 
 
-# ------------------------------------------------------------------ connection settings
+# ------------------------------------------------------------------ clusters
 
-def connection() -> dict:
-    try:
-        with open(PATH) as f:
-            saved = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        saved = {}
-    return {**DEFAULTS, **{k: v for k, v in saved.items() if k in DEFAULTS}}
+def public_cluster(c: dict) -> dict:
+    return {**{k: v for k, v in c.items() if k != "password"}, "has_password": bool(c.get("password")),
+            "configured": bool(c.get("host") and c.get("username"))}
 
 
-def public_connection() -> dict:
-    c = connection()
-    return {**{k: v for k, v in c.items() if k != "password"}, "has_password": bool(c["password"]),
-            "configured": bool(c["host"] and c["username"])}
+def get_cluster(cid: str | None) -> dict:
+    c = clusters.get(cid or "")
+    if not c:
+        raise ApiError("Choose a cluster (Clusters page)")
+    return {**DEFAULTS, **c}
 
 
-def save_connection(body: dict) -> dict:
-    c = connection()
+def validate_cluster(body: dict, current: dict | None = None) -> dict:
+    """A cluster record from the form, keeping the saved password unless replaced or dropped."""
+    c = {**DEFAULTS, **(current or {})}
+    name = (body.get("name", c["name"]) or "").strip()
     host = (body.get("host", c["host"]) or "").strip()
     host = host.removeprefix("https://").removeprefix("http://").rstrip("/")
-    if host and (any(ch.isspace() for ch in host) or "/" in host):
+    if not host:
+        raise ApiError("Enter the cluster's IP address or FQDN")
+    if any(ch.isspace() for ch in host) or "/" in host:
         raise ApiError("Enter the cluster's IP address or FQDN, without a path")
+    name = name or host
+    for other in clusters.all():
+        if other["id"] != c.get("id") and other.get("name", "").lower() == name.lower():
+            raise ApiError(f"There's already a cluster named {name}")
     try:
         port = int(body.get("port", c["port"]) or 8443)
     except (TypeError, ValueError):
@@ -67,34 +74,57 @@ def save_connection(body: dict) -> dict:
     if not 1 <= port <= 65535:
         raise ApiError("The port must be between 1 and 65535")
     base = "/" + (body.get("base_path", c["base_path"]) or DEFAULTS["base_path"]).strip().strip("/")
-    c.update(host=host, port=port, username=(body.get("username", c["username"]) or "").strip(),
+    c.update(name=name, host=host, port=port, username=(body.get("username", c["username"]) or "").strip(),
              verify_tls=bool(body.get("verify_tls", c["verify_tls"])), base_path=base)
     if body.get("save_password") is False:
         c["password"] = ""
     elif body.get("password"):
         c["password"] = body["password"]
-    with _lock:
-        PATH.parent.mkdir(parents=True, exist_ok=True)
-        tmp = PATH.with_suffix(".tmp")
-        with open(tmp, "w") as f:
-            json.dump(c, f)
-        os.chmod(tmp, 0o600)
-        os.replace(tmp, PATH)
-    return public_connection()
+    return c
+
+
+def raw_path(cid: str):
+    return RAW_DIR / f"{cid}.json"
+
+
+def migrate_legacy(share_store) -> dict | None:
+    """Before 1.3 there was one connection in cluster-api.json. Make it the first cluster, and
+    when it's the only cluster, link existing NFS/SMB shares to it."""
+    if not LEGACY_PATH.exists() or clusters.all():
+        return None
+    try:
+        with open(LEGACY_PATH) as f:
+            old = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not old.get("host"):
+        LEGACY_PATH.rename(LEGACY_PATH.with_suffix(".json.migrated"))
+        return None
+    rec = clusters.put({**DEFAULTS, **{k: v for k, v in old.items() if k in DEFAULTS}, "name": old["host"]})
+    old_raw = store.DATA_DIR / "cluster-api-responses.json"
+    if old_raw.exists():
+        RAW_DIR.mkdir(parents=True, exist_ok=True)
+        old_raw.rename(raw_path(rec["id"]))
+    for s in share_store.all():
+        if not s.get("cluster_id") and s.get("kind") in ("nfs", "smb"):
+            s["cluster_id"] = rec["id"]
+            share_store.put(s)
+    LEGACY_PATH.rename(LEGACY_PATH.with_suffix(".json.migrated"))
+    return rec
 
 
 # ------------------------------------------------------------------ client
 
 class Session:
-    """Log in once, then fetch lists with the session cookie."""
+    """Log in to one cluster once, then fetch lists with the session cookie."""
 
-    def __init__(self, password: str | None = None):
-        c = connection()
+    def __init__(self, cluster: dict, password: str | None = None):
+        c = {**DEFAULTS, **cluster}
         if not c["host"]:
-            raise ApiError("Set up the cluster API in Settings first")
+            raise ApiError(f"Cluster {c['name'] or ''} has no address")
         self.password = password or c["password"]
         if not self.password:
-            raise ApiError("Enter the cluster API password")
+            raise ApiError(f"Enter the API password for {c['name'] or c['host']}")
         self.c = c
         self.base = f"https://{c['host']}:{c['port']}{c['base_path']}"
         self.raw = {}
@@ -108,15 +138,15 @@ class Session:
         except httpx.ConnectError as e:
             await self.http.aclose()
             if "CERTIFICATE_VERIFY_FAILED" in str(e):
-                raise ApiError("The cluster's TLS certificate couldn't be verified. If it's self-signed, turn off "
-                               "\"Verify the cluster's TLS certificate\" under Settings → Cluster API.")
+                raise ApiError(f"{self.c['name']}: the cluster's TLS certificate couldn't be verified. If it's "
+                               "self-signed, turn off \"Verify the cluster's TLS certificate\" on the Clusters page.")
             raise ApiError(f"Couldn't reach {self.base}: {e}")
         except httpx.HTTPError as e:
             await self.http.aclose()
             raise ApiError(f"Couldn't reach {self.base}: {e}")
         if r.status_code in (401, 403):
             await self.http.aclose()
-            raise ApiError("The cluster rejected the username or password")
+            raise ApiError(f"{self.c['name']} rejected the username or password")
         if r.status_code >= 400:
             await self.http.aclose()
             raise ApiError(f"Login failed: HTTP {r.status_code} from {self.base}/login")
@@ -153,13 +183,18 @@ class Session:
         return items
 
     def keep_raw(self):
+        if not self.c.get("id"):
+            return
         try:
             with _lock:
-                tmp = RAW_PATH.with_suffix(".tmp")
+                RAW_DIR.mkdir(parents=True, exist_ok=True)
+                path = raw_path(self.c["id"])
+                tmp = path.with_suffix(".tmp")
                 with open(tmp, "w") as f:
-                    json.dump({"base": self.base, "responses": self.raw}, f, indent=1, default=str)
+                    json.dump({"cluster": self.c["name"], "base": self.base, "responses": self.raw}, f,
+                              indent=1, default=str)
                 os.chmod(tmp, 0o600)
-                os.replace(tmp, RAW_PATH)
+                os.replace(tmp, path)
         except OSError:
             pass
 
@@ -394,8 +429,8 @@ async def _addresses(s: "Session") -> dict:
     return mount_addresses(interfaces, nodes)
 
 
-async def fetch_mount_addresses(password: str | None = None) -> dict:
-    async with Session(password) as s:
+async def fetch_mount_addresses(cluster: dict, password: str | None = None) -> dict:
+    async with Session(cluster, password) as s:
         try:
             return await _addresses(s)
         finally:
@@ -404,16 +439,16 @@ async def fetch_mount_addresses(password: str | None = None) -> dict:
 
 # ------------------------------------------------------------------ fetches
 
-async def test(password: str | None = None) -> dict:
-    async with Session(password) as s:
+async def test(cluster: dict, password: str | None = None) -> dict:
+    async with Session(cluster, password) as s:
         clusters = await s.list("/cntl")
         name = (clusters[0] or {}).get("name") if clusters else None
         return {"ok": True, "cluster": name, "base": s.base}
 
 
-async def fetch_shares(password: str | None = None) -> tuple[list[dict], dict]:
+async def fetch_shares(cluster: dict, password: str | None = None) -> tuple[list[dict], dict]:
     """Shares, and the DSX data addresses to mount them from, in one session."""
-    async with Session(password) as s:
+    async with Session(cluster, password) as s:
         try:
             shares = [map_share(x) for x in await s.list("/shares")]
             try:
@@ -425,9 +460,9 @@ async def fetch_shares(password: str | None = None) -> tuple[list[dict], dict]:
             s.keep_raw()
 
 
-async def fetch_cluster_info(password: str | None = None) -> dict:
+async def fetch_cluster_info(cluster: dict, password: str | None = None) -> dict:
     """All four lists the objective planner uses, keyed like the CLI uploads."""
-    async with Session(password) as s:
+    async with Session(cluster, password) as s:
         try:
             return {
                 "volumes": [map_volume(v) for v in await s.list("/storage-volumes")],

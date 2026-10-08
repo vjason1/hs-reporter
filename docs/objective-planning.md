@@ -9,13 +9,15 @@ would need. It uses the same shares as reports.
 ## Workflow
 
 1. **Share and folder.** Pick a share and the folder to model (`/` for the whole share), and
-   the share's name on the cluster, used as `--name` in the generated commands.
+   the share's name on the cluster, used as `--name` in the generated commands (filled in from
+   the cluster's share list for imported shares). The plan's cluster is shown in its header.
 2. **Fields to gather, and scan.** Choose the metadata your conditions use. Most designs need
    one to five fields; the scan asks Hammerspace for those and nothing else.
-3. **Cluster information.** **Load all from the cluster API** (set up under
-   [Settings → Cluster API](configuration.md#cluster-api)), or upload or paste the output of
+3. **Cluster information.** **Load all from** the plan's cluster (the share's cluster, or one
+   you choose when the share isn't linked; see [Clusters](shares.md#clusters)), or upload or
+   paste the output of
    `volume-list --full`, `object-volume-list --full`, `volume-group-list --full` and
-   `objective-list --full`. Each card says where its data came from.
+   `objective-list --full`. Each card says where its data came from, including which cluster.
 4. **Share objectives.** Add objectives, each with a scope and an optional condition.
 5. **Placement assumptions.** Adjust the default placement and size rules if needed.
 6. **Calculate space.** See the space needed per volume group or volume, warnings, and the

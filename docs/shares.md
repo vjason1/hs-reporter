@@ -1,4 +1,4 @@
-# Shares and mounting
+# Clusters and shares
 
 hstk sends HammerScript to the cluster by writing to a special gateway file
 (`.fs_command_gateway`) on a mounted Hammerspace share and reading the results back. Every
@@ -8,13 +8,37 @@ mount doesn't have the gateway.
 
 ![Shares page](screenshots/shares.png)
 
+## Clusters
+
+The app can work with several Hammerspace clusters at once. Each is added on the **Clusters**
+page (in the left rail, above Shares):
+
+![Clusters page](screenshots/clusters.png)
+
+- **Name**, and the cluster's **management address** (the Anvil's IP or FQDN), **port** (8443)
+  and **API path** (`/mgmt/v1.2/rest`), used only for its management API.
+- **Username** and **password**. With **Save the password** off, you're asked for it each time
+  that cluster's data is fetched. Saved passwords are kept in `/data/clusters.json`, readable
+  only by the service. Use an account that can read the cluster's configuration.
+- **Verify the cluster's TLS certificate**: off by default, since clusters usually have a
+  self-signed certificate.
+- **Test** logs in and reads the cluster's name. **Responses** downloads the last raw responses
+  from that cluster, for troubleshooting.
+
+Shares and objective plans are linked to a cluster. The Shares page groups shares by cluster,
+and wherever a share is shown or chosen (reports, results, plans) its cluster is shown too, so
+shares with the same name on different clusters stay distinct. Removing a cluster keeps its
+shares, no longer linked to a cluster.
+
+Crawl speed and the limits on the Settings page are global: they cover all clusters together.
+
 ## Importing shares from the cluster
 
 **Shares → Import from cluster** adds shares from the cluster's own list:
 
-1. Click **Fetch shares** to read the list from the cluster API (set up under
-   [Settings → Cluster API](configuration.md#cluster-api)), or run `share-list` on the
-   cluster and upload or paste its output.
+1. Choose the **cluster**, then click **Fetch shares** to read the list from its management API,
+   or run `share-list` on that cluster and upload or paste its output. (Pasted output can also
+   be imported without linking it to a cluster.)
 2. Choose the address to **mount from**: a DSX data address (see below). Fetching through the
    API fills it in; otherwise **Find DSX data addresses** looks them up. Choose **NFS**, **SMB**
    or both. With both, each share is added twice, as "name (NFS)" and "name (SMB)". SMB needs a
@@ -23,17 +47,19 @@ mount doesn't have the gateway.
    isn't offered, since reports and plans work inside a share.
 
 NFS shares use the share's path as the export (`/stowerstiertest`) and SMB shares use its name
-(`stowerstiertest`). Shares that are already set up with the same server and export are
-skipped. You can mount them right away and have them mounted when the service starts.
+(`stowerstiertest`). Imported shares are linked to the cluster and remember their name on it,
+which becomes the default share name in objective plans' commands. Shares already set up from
+the same cluster (or the same server) with the same export are skipped. You can mount them right away and have them mounted when the service starts.
 
 **Mount from a DSX data address, not the Anvil.** Shares are served from the DSX nodes'
-data interfaces. The cluster's management address (the Anvil, which the cluster API uses) is
+data interfaces. A cluster's management address (the Anvil, which its API uses) is
 the wrong place to mount from, even where its interface also has the DATA role. Use an address
 on a **DSX** node's interface with the **DATA** role. The cluster API's `/network-interfaces`
 lists them; the import and the **Add share** form offer them as suggestions (**Find DSX data
-addresses**), and warn when the address entered is the Anvil's. Shares already set up with the
-cluster API's address are labeled **Anvil address** on the Shares page: edit them and change
-the server to a DSX data address.
+addresses**), and warn when the address entered is the Anvil's. Shares set up with their cluster's
+management address are labeled **Anvil address** on the Shares page (shares not linked to a
+cluster are checked against every cluster): edit them and change the server to a DSX data
+address.
 
 **Privileged ports.** A share whose export options all say `Insecure: false` only accepts NFS
 connections from privileged (low-numbered) source ports. The machine running this app may
@@ -51,7 +77,7 @@ A failed NFS mount with "access denied" repeats the reminder.
 | **SMB** | `mount -t cifs -o vers=3.0,noserverino,cache=none,actimeo=0` with a credentials file | same as NFS |
 | **Already mounted** | Uses a path you mounted on the Docker host and bound under `/mnt/external` | nothing extra |
 
-Leave a share's **Mount options** blank to use the defaults, set container-wide with
+A share's **Cluster** links it to one of the clusters on the Clusters page. Leave a share's **Mount options** blank to use the defaults, set container-wide with
 the mount defaults on the [Settings page](configuration.md#mount-defaults), or enter
 options for that share.
 

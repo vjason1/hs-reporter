@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.3.0
+
+- **Several clusters**: a new Clusters page links any number of Hammerspace clusters through
+  their management APIs (name, address, user, optional saved password, TLS verification, test,
+  last responses). The single connection under Settings moved there and is migrated
+  automatically; with one cluster, existing shares are linked to it.
+- Shares belong to a cluster: the Shares page groups them, imports choose the cluster first and
+  find that cluster's DSX data addresses, and the share form has a Cluster field.
+- Objective plans load from their share's cluster (or a chosen one), the cards say which, and
+  imported shares' names on the cluster become the default `--name` in commands.
+- Reports, results, plans and every share picker show the cluster with the share.
+- API: `/api/clusters` replaces `/api/cluster-api`.
+
 ## 1.2.0
 
 - **Mount from DSX data addresses**: share imports and the Add share form suggest addresses on

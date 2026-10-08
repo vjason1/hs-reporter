@@ -4,7 +4,9 @@ There are two kinds of configuration:
 
 - **The Settings page** (gear icon in the left rail) holds the global settings for reporting
   and objective planning: crawl speed, limits and mount defaults, and the sign-in password.
-  Changes apply right away, without a restart.
+  Changes apply right away, without a restart. They cover all clusters together.
+- **The Clusters page** holds each cluster's management API connection; see
+  [Clusters](shares.md#clusters).
 - **Environment variables** in `docker-compose.yml` set things the container needs at start
   (sign-in, time zone, paths), and the initial values of the Settings page.
 
@@ -51,32 +53,11 @@ The report designer and plan pages show the speed in effect, with a link to this
 
 Changing a limit also releases or holds back work already queued, within a second.
 
-### Cluster API
-
-The connection to the Hammerspace management API, used to fetch shares (Shares → Import from
-cluster) and volumes, volume groups and objectives (objective plans, step 3) instead of
-pasting CLI output:
-
-- **Cluster IP address or FQDN**, **Port** (8443) and **API path** (`/mgmt/v1.2/rest`).
-- **Username** and **Password**. With **Save the password** off, you're asked for it each
-  time data is fetched; a saved password is kept in `/data/cluster-api.json`, readable only by
-  the service. Use an account that can read the cluster's configuration.
-- **Verify the cluster's TLS certificate**: off by default, since clusters usually have a
-  self-signed certificate.
-- **Test connection** logs in and reads the cluster's name.
-
-The service logs in with `POST /login` (the session is kept as a cookie) and reads
-`GET /shares`, `/storage-volumes`, `/object-storage-volumes`, `/volume-groups`,
-`/objectives`, `/network-interfaces` and `/nodes`, page by page. The cluster API address is
-for management only: shares are mounted from DSX data addresses, which come from
-`/network-interfaces` (see [Shares and mounting](shares.md#importing-shares-from-the-cluster)). If something looks wrong after fetching, **Last API responses**
-downloads exactly what the cluster returned.
-
 ### Mount defaults
 
 The NFS (`vers=3,nolock`) and SMB (`vers=3.0,noserverino,cache=none,actimeo=0`) options used
 when a share's own mount options are blank, the next time it's mounted. See
-[Shares and mounting](shares.md) for why these defaults.
+[Clusters and shares](shares.md) for why these defaults.
 
 ### How settings are stored
 
@@ -151,7 +132,7 @@ hstk 4.6.6 and later need Hammerspace 4.6.5 or later.
 Mounting NFS or SMB inside the container needs the `SYS_ADMIN` and `DAC_READ_SEARCH`
 capabilities and AppArmor unconfined, as in the provided compose file. If mounts still fail
 with "permission denied", use `privileged: true`. To avoid mount privileges entirely, mount
-shares on the host instead ([Shares and mounting](shares.md#shares-mounted-on-the-host)).
+shares on the host instead ([Clusters and shares](shares.md#shares-mounted-on-the-host)).
 
 ## Data and backups
 
@@ -165,8 +146,8 @@ Everything the service keeps is under `/data` (the `hsr-data` volume):
 | `plans.json`, `plans/` | Objective plans and their scans |
 | `settings.json` | Settings changed on the Settings page |
 | `auth.json` | Sign-in username and password hash, if set on the Settings page (0600) |
-| `cluster-api.json` | Cluster API connection, and its password if saved (0600) |
-| `cluster-api-responses.json` | The last responses from the cluster API, for troubleshooting (0600) |
+| `clusters.json` | Linked clusters: management API connections, and passwords if saved (0600) |
+| `cluster-api-responses/` | The last responses from each cluster's API, for troubleshooting (0600) |
 | `schedules.json` | Schedules |
 | `runs/` | One file per result, including the raw `hs` output |
 | `exports/` | Scheduled CSV exports and history files |

@@ -100,7 +100,7 @@ class RunStore:
                 continue
             out.append({k: r.get(k) for k in (
                 "id", "name", "definition_id", "schedule_id", "trigger", "status",
-                "started", "finished", "row_count", "error", "share_name", "mode")})
+                "started", "finished", "row_count", "error", "share_name", "cluster_name", "mode")})
         return sorted(out, key=lambda r: r.get("started") or 0, reverse=True)
 
 

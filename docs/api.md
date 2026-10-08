@@ -21,6 +21,7 @@ curl -u admin:pw -X POST localhost:8080/api/shares -H 'content-type: application
 ```
 
 `kind` is `nfs`, `smb` (add `username`, `password`, `domain`) or `local` (with `local_path`).
+`cluster_id` links the share to a cluster (see Clusters below).
 
 ## Reports
 
@@ -114,17 +115,20 @@ Keys: `crawl_preset` (`normal`, `gentle`, `slowest`, `custom`), `crawl_concurren
 `crawl_pause`, `crawl_list_rate`, `max_hs_processes`, `max_concurrent`, `run_timeout`,
 `max_output_mb`, `max_folders`, `plan_max_files`, `plan_batch`, `nfs_options`, `smb_options`.
 
-## Cluster API
+## Clusters
 
 | Method and path | Purpose |
 |---|---|
-| `GET /api/cluster-api` | The connection (without the password; `has_password` says whether one is saved) |
-| `PUT /api/cluster-api` | `host`, `port`, `base_path`, `username`, `password`, `save_password`, `verify_tls` |
-| `POST /api/cluster-api/test` | Log in and read the cluster's name; `{"password"}` if it isn't saved |
-| `POST /api/cluster-api/mount-addresses` | DSX addresses on interfaces with the DATA role (where to mount from), and the Anvil's addresses |
-| `GET /api/cluster-api/responses` | The last raw responses from the cluster |
-| `POST /api/shares/import/fetch` | The share list from the cluster, like `/api/shares/import/parse` |
-| `POST /api/plans/{id}/cluster/fetch` | Load volumes, object volumes, volume groups and objectives into a plan |
+| `GET /api/clusters` / `POST /api/clusters` | List or add clusters (`name`, `host`, `port`, `base_path`, `username`, `password`, `save_password`, `verify_tls`); passwords are never returned |
+| `PUT/DELETE /api/clusters/{id}` | Change or remove a cluster (its shares stay, unlinked) |
+| `POST /api/clusters/{id}/test` | Log in and read the cluster's name; `{"password"}` if it isn't saved |
+| `POST /api/clusters/{id}/shares` | The cluster's share list, with the DSX data addresses to mount from |
+| `POST /api/clusters/{id}/mount-addresses` | DSX addresses on interfaces with the DATA role, and the Anvil's addresses |
+| `GET /api/clusters/{id}/responses` | The last raw responses from that cluster |
+
+Shares take `cluster_id`; `POST /api/shares/import` takes `cluster_id` to link the shares it
+adds; `POST /api/plans/{id}/cluster/fetch` loads from the plan's cluster, or takes
+`cluster_id` for a share that isn't linked.
 
 ## Sign-in
 

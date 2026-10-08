@@ -28,6 +28,7 @@ async def lifespan(app: FastAPI):
                 (".sh", ".py", "report 1", "report 2", "report 3")):
             d["description"] = ""
             store.definitions.put(d)
+    hsapi.migrate_legacy(store.shares)   # one cluster connection (before 1.3) -> the first cluster
     await shares.automount_all()
     scheduler.start()
     yield
@@ -70,16 +71,18 @@ def catalog():
 # ------------------------------------------------------------------ shares
 
 SHARE_FIELDS = ("name", "kind", "server", "export", "options", "username", "password",
-                "domain", "local_path", "auto_mount", "notes")
+                "domain", "local_path", "auto_mount", "notes", "cluster_id", "cluster_share_name")
 
 
 def _public_share(s: dict) -> dict:
     out = {k: v for k, v in s.items() if k != "password"}
     out["has_password"] = bool(s.get("password"))
-    # Mounting from the cluster management address (the Anvil) doesn't work: flag it
-    host = hsapi.connection()["host"]
-    out["anvil_address"] = bool(host and s.get("kind") in ("nfs", "smb")
-                                and (s.get("server") or "").lower() == host.lower())
+    cluster = hsapi.clusters.get(s.get("cluster_id") or "")
+    out["cluster_name"] = cluster["name"] if cluster else None
+    # Mounting from a cluster's management address (the Anvil) doesn't work: flag it
+    hosts = [cluster["host"]] if cluster else [c.get("host") for c in hsapi.clusters.all()]
+    out["anvil_address"] = bool(s.get("kind") in ("nfs", "smb") and (s.get("server") or "").lower()
+                                in {(h or "").lower() for h in hosts if h})
     try:
         out["status"] = shares.status(s)
     except shares.ShareError as e:
@@ -90,6 +93,8 @@ def _public_share(s: dict) -> dict:
 def _validate_share(s: dict):
     if not (s.get("name") or "").strip():
         raise HTTPException(422, "Give the share a name")
+    if s.get("cluster_id") and not hsapi.clusters.get(s["cluster_id"]):
+        raise HTTPException(422, "That cluster no longer exists")
     if s.get("kind") not in ("nfs", "smb", "local"):
         raise HTTPException(422, "Connection type must be nfs, smb or local")
     if s["kind"] in ("nfs", "smb") and not (s.get("server") and s.get("export")):
@@ -128,19 +133,6 @@ def parse_share_list(body: dict = Body(...)):
 _HOST_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$|^\[?[0-9A-Fa-f:]+\]?$")
 
 
-@app.post("/api/shares/import/fetch")
-async def fetch_share_list(body: dict | None = Body(None)):
-    """The same list as share-list, from the cluster API."""
-    try:
-        found, addresses = await hsapi.fetch_shares((body or {}).get("password"))
-    except hsapi.ApiError as e:
-        raise HTTPException(422, str(e))
-    # Mount from a DSX data address, never the Anvil / cluster management address
-    return {"shares": [s for s in found if not s["is_root"]], "root_excluded": sum(s["is_root"] for s in found),
-            "addresses": addresses, "cluster_host": hsapi.connection()["host"],
-            "server": addresses["data"][0]["address"] if addresses["data"] else ""}
-
-
 @app.post("/api/shares/import")
 async def import_shares(body: dict = Body(...)):
     """Add shares picked from share-list output, over NFS, SMB or both."""
@@ -152,6 +144,9 @@ async def import_shares(body: dict = Body(...)):
         raise HTTPException(422, "Choose NFS, SMB or both")
     if "smb" in protocols and not (body.get("username") or "").strip():
         raise HTTPException(422, "SMB needs a username")
+    cluster_id = body.get("cluster_id") or None
+    if cluster_id and not hsapi.clusters.get(cluster_id):
+        raise HTTPException(422, "That cluster no longer exists")
     picked = [s for s in body.get("shares") or [] if s.get("name") and (s.get("path") or "") != "/" and s.get("name") != "root"]
     if not picked:
         raise HTTPException(422, "Choose at least one share")
@@ -159,8 +154,10 @@ async def import_shares(body: dict = Body(...)):
     existing = store.shares.all()
 
     def exists(kind, export):
-        return next((e for e in existing if e.get("kind") == kind and (e.get("server") or "").lower() == server.lower()
-                     and (e.get("export") or "").strip("/") == export.strip("/")), None)
+        # same protocol and export, from the same cluster (or the same server when not linked)
+        return next((e for e in existing if e.get("kind") == kind and (e.get("export") or "").strip("/") == export.strip("/")
+                     and ((cluster_id and e.get("cluster_id") == cluster_id)
+                          or (e.get("server") or "").lower() == server.lower())), None)
 
     created, skipped, mount_errors = [], [], []
     for s in picked:
@@ -172,7 +169,8 @@ async def import_shares(body: dict = Body(...)):
                 skipped.append({"name": name, "reason": f"already added as {dup['name']}"})
                 continue
             rec = {"name": name, "kind": kind, "server": server, "export": export, "options": None,
-                   "auto_mount": bool(body.get("auto_mount", True)), "notes": f"Imported from share-list ({s['name']})"}
+                   "auto_mount": bool(body.get("auto_mount", True)), "cluster_id": cluster_id,
+                   "cluster_share_name": s["name"], "notes": f"Imported from the cluster's share list ({s['name']})"}
             if kind == "smb":
                 rec.update(username=body.get("username").strip(), password=body.get("password") or "",
                            domain=(body.get("domain") or "").strip() or None)
@@ -549,42 +547,98 @@ def put_settings(body: dict = Body(...)):
     return _settings_view()
 
 
-@app.get("/api/cluster-api")
-def get_cluster_api():
-    return hsapi.public_connection()
+# ---------------------------------------------------------------- clusters
+
+def _cluster(cid):
+    return hsapi.clusters.get(cid) or _404("Cluster")
 
 
-@app.put("/api/cluster-api")
-def put_cluster_api(body: dict = Body(...)):
+def _public_cluster(c: dict) -> dict:
+    out = hsapi.public_cluster(c)
+    out["shares"] = sum(1 for s in store.shares.all() if s.get("cluster_id") == c["id"])
+    out["has_responses"] = hsapi.raw_path(c["id"]).exists()
+    return out
+
+
+@app.get("/api/clusters")
+def list_clusters():
+    return [_public_cluster(c) for c in hsapi.clusters.all()]
+
+
+@app.post("/api/clusters")
+def create_cluster(body: dict = Body(...)):
     try:
-        return hsapi.save_connection(body)
+        c = hsapi.validate_cluster(body)
+    except hsapi.ApiError as e:
+        raise HTTPException(422, str(e))
+    return _public_cluster(hsapi.clusters.put(c))
+
+
+@app.put("/api/clusters/{cid}")
+def update_cluster(cid: str, body: dict = Body(...)):
+    try:
+        c = hsapi.validate_cluster(body, _cluster(cid))
+    except hsapi.ApiError as e:
+        raise HTTPException(422, str(e))
+    return _public_cluster(hsapi.clusters.put(c))
+
+
+@app.delete("/api/clusters/{cid}")
+def delete_cluster(cid: str):
+    _cluster(cid)
+    unlinked = 0
+    for s in store.shares.all():   # shares stay; they're just no longer linked
+        if s.get("cluster_id") == cid:
+            s["cluster_id"] = None
+            store.shares.put(s)
+            unlinked += 1
+    for p in objplan.plans.all():
+        if p.get("cluster_id") == cid:
+            p["cluster_id"] = None
+            objplan.plans.put(p)
+    hsapi.clusters.delete(cid)
+    hsapi.raw_path(cid).unlink(missing_ok=True)
+    return {"deleted": cid, "unlinked_shares": unlinked}
+
+
+async def _with_cluster(cid, fn, body):
+    try:
+        return await fn(hsapi.get_cluster(cid), (body or {}).get("password"))
     except hsapi.ApiError as e:
         raise HTTPException(422, str(e))
 
 
-@app.post("/api/cluster-api/test")
-async def test_cluster_api(body: dict | None = Body(None)):
-    try:
-        return await hsapi.test((body or {}).get("password"))
-    except hsapi.ApiError as e:
-        raise HTTPException(422, str(e))
+@app.post("/api/clusters/{cid}/test")
+async def test_cluster(cid: str, body: dict | None = Body(None)):
+    _cluster(cid)
+    return await _with_cluster(cid, hsapi.test, body)
 
 
-@app.post("/api/cluster-api/mount-addresses")
-async def cluster_mount_addresses(body: dict | None = Body(None)):
+@app.post("/api/clusters/{cid}/mount-addresses")
+async def cluster_mount_addresses(cid: str, body: dict | None = Body(None)):
     """DSX addresses on interfaces with the DATA role, to mount shares from."""
-    try:
-        return {**await hsapi.fetch_mount_addresses((body or {}).get("password")),
-                "cluster_host": hsapi.connection()["host"]}
-    except hsapi.ApiError as e:
-        raise HTTPException(422, str(e))
+    c = _cluster(cid)
+    return {**await _with_cluster(cid, hsapi.fetch_mount_addresses, body), "cluster_host": c["host"]}
 
 
-@app.get("/api/cluster-api/responses")
-def cluster_api_responses():
-    if not hsapi.RAW_PATH.exists():
-        _404("No cluster API responses yet")
-    return FileResponse(hsapi.RAW_PATH, filename="cluster-api-responses.json", media_type="application/json")
+@app.post("/api/clusters/{cid}/shares")
+async def cluster_share_list(cid: str, body: dict | None = Body(None)):
+    """The same list as share-list, from this cluster's API, with the DSX data addresses."""
+    c = _cluster(cid)
+    found, addresses = await _with_cluster(cid, hsapi.fetch_shares, body)
+    return {"shares": [s for s in found if not s["is_root"]], "root_excluded": sum(s["is_root"] for s in found),
+            "addresses": addresses, "cluster_id": cid, "cluster_name": c["name"], "cluster_host": c["host"],
+            "server": addresses["data"][0]["address"] if addresses["data"] else ""}
+
+
+@app.get("/api/clusters/{cid}/responses")
+def cluster_responses(cid: str):
+    c = _cluster(cid)
+    path = hsapi.raw_path(cid)
+    if not path.exists():
+        _404("No API responses from this cluster yet")
+    safe = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in c["name"])
+    return FileResponse(path, filename=f"{safe}-api-responses.json", media_type="application/json")
 
 
 @app.get("/api/auth")
@@ -616,17 +670,26 @@ def reset_settings():
 
 # ------------------------------------------------------- objective planning
 
-PLAN_FIELDS = ("name", "share_id", "root", "fields", "metas", "rows", "settings", "cluster_share")
+PLAN_FIELDS = ("name", "share_id", "root", "fields", "metas", "rows", "settings", "cluster_share", "cluster_id")
 
 
 def _plan(pid):
     return objplan.plans.get(pid) or _404("Plan")
 
 
+def _plan_cluster(p: dict) -> dict | None:
+    """The cluster a plan models: its share's, unless the plan names one."""
+    share = store.shares.get(p.get("share_id") or "") or {}
+    return hsapi.clusters.get(p.get("cluster_id") or share.get("cluster_id") or "")
+
+
 def _public_plan(p: dict) -> dict:
     share = store.shares.get(p.get("share_id") or "")
     out = {k: v for k, v in p.items() if k != "result"}
     out["share_name"] = share["name"] if share else None
+    c = _plan_cluster(p)
+    # the cluster this plan loads from (p["cluster"] holds the loaded volumes, groups and objectives)
+    out["linked_cluster"] = {"id": c["id"], "name": c["name"], "has_password": bool(c.get("password"))} if c else None
     out["needed"] = dict(zip(("fields", "metas"), objplan.needed_fields(p)))
     out["checks"] = objplan.validate_rows(p)
     c = p.get("cluster") or {}
@@ -648,7 +711,9 @@ def list_plans():
     out = []
     for p in objplan.plans.all():
         share = store.shares.get(p.get("share_id") or "")
+        c = _plan_cluster(p)
         out.append({"id": p["id"], "name": p.get("name"), "share_name": share["name"] if share else None,
+                    "cluster_name": c["name"] if c else None,
                     "root": p.get("root") or "/", "rows": len(p.get("rows") or []),
                     "scan": {k: (p.get("scan") or {}).get(k) for k in ("status", "files", "finished")},
                     "calculated": (p.get("result") or {}).get("calculated")})
@@ -683,8 +748,9 @@ def create_plan(body: dict = Body(...)):
     p = _clean_plan({"fields": ["MODIFY_AGE"], **body})
     if not store.shares.get(p.get("share_id") or ""):
         raise HTTPException(422, "Choose a share")
-    if not p.get("cluster_share"):
-        p["cluster_share"] = store.shares.get(p["share_id"])["name"]
+    if not p.get("cluster_share"):   # the share's name on the cluster, for share-objective-add --name
+        sh = store.shares.get(p["share_id"])
+        p["cluster_share"] = sh.get("cluster_share_name") or sh["name"]
     return _public_plan(objplan.plans.put(p))
 
 
@@ -740,6 +806,7 @@ def upload_cluster(pid: str, body: dict = Body(...)):
     c[kind] = items
     c.setdefault("uploaded", {})[kind] = store.now()
     c.setdefault("sources", {})[kind] = "upload"
+    c.setdefault("source_cluster", {}).pop(kind, None)
     p["cluster"] = c
     p.pop("result", None)
     objplan.plans.put(p)
@@ -749,9 +816,16 @@ def upload_cluster(pid: str, body: dict = Body(...)):
 @app.post("/api/plans/{pid}/cluster/fetch")
 async def fetch_cluster(pid: str, body: dict | None = Body(None)):
     """Volumes, object volumes, volume groups and objectives from the cluster API, in one go."""
-    _plan(pid)
+    p = _plan(pid)
+    cid = (body or {}).get("cluster_id")
+    cluster = hsapi.clusters.get(cid) if cid else _plan_cluster(p)
+    if not cluster:
+        raise HTTPException(422, "Choose the cluster to load from")
+    if cid:                      # remember the choice for a share that isn't linked to a cluster
+        p["cluster_id"] = cid
+        objplan.plans.put(p)
     try:
-        info = await hsapi.fetch_cluster_info((body or {}).get("password"))
+        info = await hsapi.fetch_cluster_info(cluster, (body or {}).get("password"))
     except hsapi.ApiError as e:
         raise HTTPException(422, str(e))
     p = _plan(pid)
@@ -761,6 +835,7 @@ async def fetch_cluster(pid: str, body: dict | None = Body(None)):
         c[kind] = items
         c.setdefault("uploaded", {})[kind] = now
         c.setdefault("sources", {})[kind] = "api"
+        c.setdefault("source_cluster", {})[kind] = cluster["name"]
     p["cluster"] = c
     p.pop("result", None)
     objplan.plans.put(p)

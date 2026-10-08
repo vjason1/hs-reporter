@@ -12,15 +12,17 @@ FIX = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
-def api(monkeypatch):
-    """The fake cluster API, a small page size (to exercise paging), and a saved connection."""
+def api(client, monkeypatch):
+    """The fake cluster API (any address reaches it), a small page size to exercise paging,
+    and two linked clusters: A (password saved) and B (password not saved)."""
     monkeypatch.setattr(hsapi, "_transport", httpx.ASGITransport(app=fake_hs_api.app))
     monkeypatch.setattr(hsapi, "PAGE_SIZE", 2)
-    hsapi.PATH.unlink(missing_ok=True)
-    hsapi.save_connection({"host": "10.200.10.160", "username": "admin", "password": "secret"})
-    yield
-    hsapi.PATH.unlink(missing_ok=True)
-    hsapi.RAW_PATH.unlink(missing_ok=True)
+    a = client.post("/api/clusters", json={"name": "JV-HS-A", "host": "10.200.10.160", "username": "admin",
+                                           "password": "secret"}).json()
+    b = client.post("/api/clusters", json={"name": "DK-HS-A", "host": "10.200.10.175", "username": "admin"}).json()
+    yield {"a": a, "b": b}
+    for c in client.get("/api/clusters").json():
+        client.delete(f"/api/clusters/{c['id']}")
 
 
 def cli(name):
@@ -29,7 +31,7 @@ def cli(name):
 
 def test_api_matches_cli_import(api):
     import asyncio
-    info = asyncio.run(hsapi.fetch_cluster_info())
+    info = asyncio.run(hsapi.fetch_cluster_info(hsapi.get_cluster(api["a"]["id"])))
     # storage volumes: same names, nodes, access, free space, groups, protection
     by_api = {v["name"]: v for v in info["volumes"]}
     for v in cli("volume-list"):
@@ -56,9 +58,10 @@ def test_plan_from_api_matches_plan_from_cli(client, share, tree, api):
                                         "fields": ["MODIFY_AGE"]}).json()
     q = client.post("/api/plans", json={"name": "cli", "share_id": share["id"], "root": "/plans",
                                         "fields": ["MODIFY_AGE"]}).json()
-    r = client.post(f"/api/plans/{p['id']}/cluster/fetch").json()
+    r = client.post(f"/api/plans/{p['id']}/cluster/fetch", json={"cluster_id": api["a"]["id"]}).json()
     assert r["counts"] == {"volumes": 2, "object_volumes": 1, "volume_groups": 7, "objectives": 10}
     assert r["plan"]["cluster"]["sources"]["objectives"] == "api"
+    assert r["plan"]["cluster"]["source_cluster"]["objectives"] == "JV-HS-A"
     for name in ("volume-list", "object-volume-list", "volume-group-list", "objective-list"):
         client.post(f"/api/plans/{q['id']}/cluster", json={"text": (FIX / f"{name}.txt").read_text()})
     rows = [{"objective": "place-on-object-volumes", "condition": "MODIFY_AGE>30*DAYS"},
@@ -75,28 +78,79 @@ def test_plan_from_api_matches_plan_from_cli(client, share, tree, api):
 
 
 def test_shares_from_api(client, api):
-    r = client.post("/api/shares/import/fetch").json()
+    r = client.post(f"/api/clusters/{api['a']['id']}/shares").json()
     assert [s["name"] for s in r["shares"]] == ["stowerstiertest"] and r["root_excluded"] == 1
+    assert r["cluster_name"] == "JV-HS-A" and r["cluster_host"] == "10.200.10.160"
     assert r["server"] == "10.200.10.126" and r["shares"][0]["insecure_allowed"] is False   # DSX data address
-    raw = client.get("/api/cluster-api/responses")
+    raw = client.get(f"/api/clusters/{api['a']['id']}/responses")
     assert raw.status_code == 200 and "/shares" in raw.json()["responses"]
+    assert client.get(f"/api/clusters/{api['b']['id']}/responses").status_code == 404   # per cluster
 
 
-def test_connection_settings_and_errors(client, api):
-    pub = client.get("/api/cluster-api").json()
-    assert pub["has_password"] and "password" not in pub and pub["port"] == 8443
-    assert client.post("/api/cluster-api/test").json() == {"ok": True, "cluster": "JV-HS-A",
-                                                           "base": "https://10.200.10.160:8443/mgmt/v1.2/rest"}
-    wrong = client.post("/api/cluster-api/test", json={"password": "nope"})
-    assert wrong.status_code == 422 and "rejected the username or password" in wrong.json()["detail"]
-    client.put("/api/cluster-api", json={"save_password": False})              # don't keep the password
-    assert client.get("/api/cluster-api").json()["has_password"] is False
-    ask = client.post("/api/shares/import/fetch")
-    assert ask.status_code == 422 and "password" in ask.json()["detail"]
-    assert client.post("/api/shares/import/fetch", json={"password": "secret"}).status_code == 200
-    bad = client.put("/api/cluster-api", json={"host": "https://anvil.example.com/mgmt"})
-    assert bad.status_code == 422
-    assert client.put("/api/cluster-api", json={"host": "https://anvil.example.com"}).json()["host"] == "anvil.example.com"
+def test_cluster_settings_and_errors(client, api):
+    a, b = api["a"], api["b"]
+    listed = {c["name"]: c for c in client.get("/api/clusters").json()}
+    assert listed["JV-HS-A"]["has_password"] and not listed["DK-HS-A"]["has_password"]
+    assert "password" not in listed["JV-HS-A"] and listed["JV-HS-A"]["port"] == 8443
+    assert client.post(f"/api/clusters/{a['id']}/test").json() == {
+        "ok": True, "cluster": "JV-HS-A", "base": "https://10.200.10.160:8443/mgmt/v1.2/rest"}
+    wrong = client.post(f"/api/clusters/{a['id']}/test", json={"password": "nope"})
+    assert wrong.status_code == 422 and wrong.json()["detail"] == "JV-HS-A rejected the username or password"
+    ask = client.post(f"/api/clusters/{b['id']}/shares")                 # B's password isn't saved
+    assert ask.status_code == 422 and "API password for DK-HS-A" in ask.json()["detail"]
+    assert client.post(f"/api/clusters/{b['id']}/shares", json={"password": "secret"}).status_code == 200
+    dup = client.post("/api/clusters", json={"name": "jv-hs-a", "host": "10.1.1.1"})
+    assert dup.status_code == 422 and "already a cluster named" in dup.json()["detail"]
+    assert client.post("/api/clusters", json={"name": "x", "host": "https://a.example.com/mgmt"}).status_code == 422
+    r = client.put(f"/api/clusters/{b['id']}", json={"host": "https://dk-anvil.example.com"}).json()
+    assert r["host"] == "dk-anvil.example.com" and r["name"] == "DK-HS-A"
+
+
+def test_same_share_from_two_clusters(client, api):
+    a, b = api["a"], api["b"]
+    pick = [{"name": "stowerstiertest", "path": "/stowerstiertest"}]
+    ra = client.post("/api/shares/import", json={"cluster_id": a["id"], "server": "10.200.10.126",
+                                                  "protocols": ["nfs"], "shares": pick, "auto_mount": False}).json()
+    rb = client.post("/api/shares/import", json={"cluster_id": b["id"], "server": "10.200.20.126",
+                                                  "protocols": ["nfs"], "shares": pick, "auto_mount": False}).json()
+    assert len(ra["created"]) == len(rb["created"]) == 1                 # same share name, different clusters
+    sa, sb = ra["created"][0], rb["created"][0]
+    assert (sa["cluster_name"], sb["cluster_name"]) == ("JV-HS-A", "DK-HS-A")
+    assert sa["cluster_share_name"] == "stowerstiertest"
+    again = client.post("/api/shares/import", json={"cluster_id": a["id"], "server": "10.200.10.127",
+                                                     "protocols": ["nfs"], "shares": pick}).json()
+    assert again["created"] == [] and "already added" in again["skipped"][0]["reason"]   # same cluster, other DSX
+    # a plan on B's share loads from B and defaults --name to the share's name on the cluster
+    plan = client.post("/api/plans", json={"name": "b", "share_id": sb["id"], "root": "/"}).json()
+    assert plan["linked_cluster"]["name"] == "DK-HS-A" and plan["cluster_share"] == "stowerstiertest"
+    loaded = client.post(f"/api/plans/{plan['id']}/cluster/fetch", json={"password": "secret"}).json()
+    assert loaded["plan"]["cluster"]["source_cluster"]["volumes"] == "DK-HS-A"
+    # deleting a cluster keeps its shares, unlinked
+    gone = client.delete(f"/api/clusters/{b['id']}").json()
+    assert gone["unlinked_shares"] == 1
+    sb_now = next(s for s in client.get("/api/shares").json() if s["id"] == sb["id"])
+    assert sb_now["cluster_id"] is None and sb_now["cluster_name"] is None
+    assert client.post(f"/api/plans/{plan['id']}/cluster/fetch").status_code == 422     # now: choose a cluster
+    for s in (sa, sb):
+        client.delete(f"/api/shares/{s['id']}")
+    client.delete(f"/api/plans/{plan['id']}")
+
+
+def test_migration_from_single_connection(client, api, monkeypatch):
+    import json
+    from app import store
+    for c in client.get("/api/clusters").json():
+        client.delete(f"/api/clusters/{c['id']}")
+    share = client.post("/api/shares", json={"name": "old", "kind": "nfs", "server": "10.200.10.126", "export": "/x"}).json()
+    hsapi.LEGACY_PATH.write_text(json.dumps({"host": "10.200.10.160", "port": 8443, "username": "admin",
+                                             "password": "secret", "verify_tls": False}))
+    rec = hsapi.migrate_legacy(store.shares)
+    assert rec["name"] == "10.200.10.160" and rec["password"] == "secret"
+    assert not hsapi.LEGACY_PATH.exists() and hsapi.LEGACY_PATH.with_suffix(".json.migrated").exists()
+    assert store.shares.get(share["id"])["cluster_id"] == rec["id"]          # the only cluster: shares linked
+    assert hsapi.migrate_legacy(store.shares) is None                        # runs once
+    hsapi.LEGACY_PATH.with_suffix(".json.migrated").unlink()
+    client.delete(f"/api/shares/{share['id']}")
 
 
 def test_mount_addresses_from_real_interfaces():
@@ -110,20 +164,26 @@ def test_mount_addresses_from_real_interfaces():
 
 
 def test_share_fetch_suggests_dsx_data_address(client, api):
-    r = client.post("/api/shares/import/fetch").json()
+    r = client.post(f"/api/clusters/{api['a']['id']}/shares").json()
     assert r["cluster_host"] == "10.200.10.160"
     assert r["server"] == "10.200.10.126"                 # a DSX data address, not the API host
     assert [d["address"] for d in r["addresses"]["data"]] == ["10.200.10.126", "10.200.10.127"]   # dsx-2 via /nodes
     assert "10.200.20.127" not in str(r["addresses"])      # MGMT-only interface left out
     assert r["addresses"]["anvil"] == ["10.200.10.125"]
-    m = client.post("/api/cluster-api/mount-addresses").json()
+    m = client.post(f"/api/clusters/{api['a']['id']}/mount-addresses").json()
     assert [d["address"] for d in m["data"]] == ["10.200.10.126", "10.200.10.127"]
 
 
 def test_shares_on_the_anvil_address_are_flagged(client, api):
-    s = client.post("/api/shares", json={"name": "wrong", "kind": "nfs", "server": "10.200.10.160", "export": "/x"}).json()
-    t = client.post("/api/shares", json={"name": "right", "kind": "nfs", "server": "10.200.10.126", "export": "/x"}).json()
-    flags = {x["name"]: x["anvil_address"] for x in client.get("/api/shares").json() if x["name"] in ("wrong", "right")}
-    assert flags == {"wrong": True, "right": False}
-    for x in (s, t):
+    a = api["a"]["id"]
+    s = client.post("/api/shares", json={"name": "wrong", "kind": "nfs", "server": "10.200.10.160", "export": "/x",
+                                         "cluster_id": a}).json()
+    t = client.post("/api/shares", json={"name": "right", "kind": "nfs", "server": "10.200.10.126", "export": "/x",
+                                         "cluster_id": a}).json()
+    u = client.post("/api/shares", json={"name": "unlinked", "kind": "nfs", "server": "10.200.10.175", "export": "/x"}).json()
+    flags = {x["name"]: x["anvil_address"] for x in client.get("/api/shares").json() if x["name"] in ("wrong", "right", "unlinked")}
+    assert flags == {"wrong": True, "right": False, "unlinked": True}   # unlinked: checked against every cluster
+    bad = client.post("/api/shares", json={"name": "x", "kind": "nfs", "server": "1.2.3.4", "export": "/x", "cluster_id": "nope"})
+    assert bad.status_code == 422
+    for x in (s, t, u):
         client.delete(f"/api/shares/{x['id']}")

@@ -268,6 +268,7 @@ pre.raw{background:#F6F7F9;border:1px solid var(--rule-2);padding:12px;font:12px
     <a href="#/runs" title="Results"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 4h18v4H3V4zm0 6h5v4H3v-4zm7 0h11v4H10v-4zM3 16h5v4H3v-4zm7 0h11v4H10v-4z"/></svg><span>Results</span></a>
     <a href="#/schedules" title="Schedules"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 3a1 1 0 0 1 1 1v5.6l3.7 2.1a1 1 0 1 1-1 1.8l-4.2-2.5A1 1 0 0 1 11 12V6a1 1 0 0 1 1-1z"/></svg><span>Schedules</span></a>
     <a href="#/plans" title="Objectives"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2zm0 4a6 6 0 1 0 6 6h-2a4 4 0 1 1-4-4V6zm0 4a2 2 0 1 0 2 2h-2v-2zm3-8v3.6l-3.7 3.7 1.4 1.4L16.4 7H20l2-2-3-1-1-3-3 1z"/></svg><span>Objectives</span></a>
+    <a href="#/clusters" title="Clusters"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 3h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 2.2v1.6h2V5.2H6zM4 10h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1zm2 2.2v1.6h2v-1.6H6zM4 17h16a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1z"/></svg><span>Clusters</span></a>
     <a href="#/shares" title="Shares"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v1H2V6zm0 4h20v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8zm13 4.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 0 0-3 0z"/></svg><span>Shares</span></a>
     <a href="#/settings" title="Settings"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.8 1.7 1l.4 2.6h4l.4-2.6c.6-.2 1.2-.6 1.7-1l2.5 1 2-3.5L19.4 13zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg><span>Settings</span></a>
   </nav>
@@ -387,7 +388,7 @@ function openDialog(html, onMount, width) {
 // ---------------------------------------------------------------- router
 const routes = {
   reports: renderReports, design: renderDesigner, runs: renderRuns, run: renderRun,
-  schedules: renderSchedules, shares: renderShares, plans: renderPlans, plan: renderPlan, settings: renderSettings,
+  schedules: renderSchedules, shares: renderShares, plans: renderPlans, plan: renderPlan, settings: renderSettings, clusters: renderClusters,
 };
 async function route() {
   clearTimeout(pollTimer);
@@ -419,14 +420,18 @@ document.addEventListener("click", e => $$("details.menu[open]").forEach(d => { 
 
 // ---------------------------------------------------------------- shares
 async function renderShares() {
-  const list = await api("/api/shares");
+  const [list, clusters] = await Promise.all([api("/api/shares"), api("/api/clusters")]);
+  // one group per cluster, then shares not linked to a cluster
+  const groups = [...clusters.map(c => ({title: c.name, sub: c.host, items: list.filter(s => s.cluster_id === c.id)})),
+    {title: "Not linked to a cluster", sub: "", items: list.filter(s => !s.cluster_id)}].filter(g => g.items.length);
   view.innerHTML = `
   <header class="page"><div><h1>Shares</h1>
     <p class="sub">Hammerspace NFS or SMB shares the reports run against. hstk needs a direct mount of a Hammerspace share, not a re-export.</p></div>
     <div class="row"><button id="import">Import from cluster</button><button class="primary" id="add">Add share</button></div></header>
   <div class="panel">${list.length ? `<div class="scroll"><table class="data">
     <thead><tr><th>Name</th><th>Connection</th><th>Mounted at</th><th>Status</th><th></th></tr></thead><tbody>
-    ${list.map(s => `<tr>
+    ${groups.map(g => `<tr><td colspan="5" style="background:#F3F6FA;border-bottom:1px solid var(--rule)"><b>${esc(g.title)}</b>${g.sub ? ` <span class="hint mono">${esc(g.sub)}</span>` : ""}</td></tr>
+    ${g.items.map(s => `<tr>
       <td><b>${esc(s.name)}</b>${s.auto_mount ? `<div class="hint">Mounts on startup</div>` : ""}
         ${s.anvil_address ? `<div><span class="pill bad" title="This is the cluster management address (the Anvil). Edit the share and mount from a DSX data address: an interface with the DATA role on a DSX node.">Anvil address</span></div>` : ""}</td>
       <td class="mono">${s.kind === "local" ? "local " + esc(s.local_path) : `${s.kind} ${esc(s.kind === "smb" ? "//" + s.server + "/" + s.export.replace(/^\//,"") : s.server + ":" + s.export)}`}</td>
@@ -439,7 +444,7 @@ async function renderShares() {
       <td><div class="row" style="justify-content:flex-end">
         ${s.kind !== "local" ? (s.status.stale ? `<button class="primary" data-remount="${s.id}">Remount</button>` : s.status.mounted ? `<button data-un="${s.id}">Unmount</button>` : `<button data-mount="${s.id}">Mount</button>`) : ""}
         <button class="ghost" data-edit="${s.id}">Edit</button>
-        <button class="ghost danger" data-del="${s.id}">Delete</button></div></td></tr>`).join("")}
+        <button class="ghost danger" data-del="${s.id}">Delete</button></div></td></tr>`).join("")}`).join("")}
     </tbody></table></div>` : `<div class="empty"><p>No shares yet. Add a Hammerspace share, or import them from the cluster's share list.</p><div class="row" style="justify-content:center"><button id="import2">Import from cluster</button><button class="primary" id="add2">Add share</button></div></div>`}
   </div>`;
   const byId = Object.fromEntries(list.map(s => [s.id, s]));
@@ -455,19 +460,21 @@ async function renderShares() {
     if (!confirm(`Delete share "${byId[b.dataset.del].name}"? Reports that use it will stop working.`)) return;
     await act(() => api(`/api/shares/${b.dataset.del}`, {method:"DELETE"}), "Share deleted"); renderShares(); });
 }
-// ---- cluster API: calls that need the API password, asking for it when it isn't saved
-async function clusterApi(path, label) {
-  const conn = await api("/api/cluster-api");
-  if (!conn.configured) {
-    toast("Set up the cluster API in Settings first", true);
-    location.hash = "#/settings";
+// ---- clusters: labels, and calls that need a cluster's API password (asked for when not saved)
+const shareLabel = s => s ? (s.cluster_name ? `${s.cluster_name} · ${s.name}` : s.name) : "";
+async function clusterApi(cid, path, label, extra = {}) {
+  const clusters = await api("/api/clusters");
+  const c = clusters.find(x => x.id === cid);
+  if (!c) {
+    toast(clusters.length ? "Choose a cluster" : "Add a cluster on the Clusters page first", true);
+    if (!clusters.length) location.hash = "#/clusters";
     throw new Error("not configured");
   }
-  const call = password => api(path, {method: "POST", body: password ? {password} : {}});
-  if (conn.has_password) return call();
+  const call = password => api(path, {method: "POST", body: {...extra, ...(password ? {password} : {})}});
+  if (c.has_password) return call();
   return new Promise((resolve, reject) => {
-    openDialog(`<form id="cap"><h2>Cluster API password</h2><div class="stack">
-      <p class="hint" style="margin:0">${esc(label)} from <b>${esc(conn.host)}</b> as <b>${esc(conn.username)}</b>. The password isn't saved; it's used for this request only.</p>
+    openDialog(`<form id="cap"><h2>API password for ${esc(c.name)}</h2><div class="stack">
+      <p class="hint" style="margin:0">${esc(label)} from <b>${esc(c.name)}</b> (${esc(c.host)}) as <b>${esc(c.username)}</b>. The password isn't saved; it's used for this request only.</p>
       <div><label class="f" for="cap-pw">Password</label><input type="password" id="cap-pw" autocomplete="current-password" required></div>
     </div><div class="actions"><button data-close>Cancel</button><button class="primary" type="submit">Continue</button></div></form>`, d => {
       $("#cap-pw", d).focus();
@@ -481,6 +488,77 @@ async function clusterApi(path, label) {
     });
   });
 }
+const quietErr = err => { if (!["cancelled", "not configured"].includes(err.message)) toast(err.message, true); };
+const clusterOptions = (clusters, selected, none) => (none ? `<option value="">${esc(none)}</option>` : "") +
+  clusters.map(c => `<option value="${c.id}" ${c.id === selected ? "selected" : ""}>${esc(c.name)} (${esc(c.host)})</option>`).join("");
+
+// ---------------------------------------------------------------- clusters page
+async function renderClusters() {
+  const [clusters, shares] = await Promise.all([api("/api/clusters"), api("/api/shares")]);
+  view.innerHTML = `
+  <header class="page"><div><h1>Clusters</h1>
+    <p class="sub">The Hammerspace clusters this app works with, through their management API: fetching shares, volumes, volume groups and objectives. Shares and objective plans are linked to a cluster.</p></div>
+    <button class="primary" id="cl-add">Add cluster</button></header>
+  <div class="panel">${clusters.length ? `<div class="scroll"><table class="data"><thead><tr><th>Cluster</th><th>Management address</th><th>User</th><th class="num">Shares</th><th>Connection</th><th></th></tr></thead><tbody>
+    ${clusters.map(c => `<tr><td><b>${esc(c.name)}</b></td><td class="mono">https://${esc(c.host)}:${esc(c.port)}${esc(c.base_path)}</td>
+      <td>${esc(c.username)} <span class="hint">${c.has_password ? "password saved" : "asks for the password"}</span></td>
+      <td class="num">${num(c.shares)}</td><td data-test-status="${c.id}"><span class="hint">Not tested</span></td>
+      <td><div class="row" style="justify-content:flex-end"><button data-test="${c.id}">Test</button>
+        ${c.has_responses ? `<a class="btn ghost" href="/api/clusters/${c.id}/responses" title="The last raw responses from this cluster, for troubleshooting">Responses</a>` : ""}
+        <button class="ghost" data-edit="${c.id}">Edit</button><button class="ghost danger" data-del="${c.id}">Delete</button></div></td></tr>`).join("")}
+  </tbody></table></div>
+  <p class="hint" style="margin:10px 0 0">The management address is the Anvil's, used only for the API. Shares are mounted from each cluster's DSX data addresses.</p>`
+  : `<div class="empty"><p>No clusters yet. Add one to fetch shares, volumes and objectives from its management API. You can still paste CLI output without one.</p><button class="primary" id="cl-add2">Add cluster</button></div>`}</div>`;
+  const byId = Object.fromEntries(clusters.map(c => [c.id, c]));
+  $$("#cl-add,#cl-add2").forEach(b => b.onclick = () => clusterDialog());
+  $$("[data-edit]").forEach(b => b.onclick = () => clusterDialog(byId[b.dataset.edit]));
+  $$("[data-test]").forEach(b => b.onclick = async () => {
+    const st = $(`[data-test-status="${b.dataset.test}"]`); st.innerHTML = `<span class="hint">Connecting…</span>`;
+    try { const r = await clusterApi(b.dataset.test, `/api/clusters/${b.dataset.test}/test`, "Testing the connection");
+      st.innerHTML = `<span class="pill ok">Connected${r.cluster ? " to " + esc(r.cluster) : ""}</span>`; }
+    catch (err) { st.innerHTML = err.message === "cancelled" ? `<span class="hint">Not tested</span>` : `<span class="status-line bad">${esc(err.message)}</span>`; }
+  });
+  $$("[data-del]").forEach(b => b.onclick = async () => {
+    const c = byId[b.dataset.del];
+    if (!confirm(`Remove cluster "${c.name}"?${c.shares ? ` Its ${c.shares} share${c.shares > 1 ? "s" : ""} stay, no longer linked to a cluster.` : ""}`)) return;
+    await act(() => api(`/api/clusters/${c.id}`, {method: "DELETE"}), "Cluster removed"); renderClusters();
+  });
+}
+
+function clusterDialog(c) {
+  const isNew = !c;
+  c = c || {port: 8443, base_path: "/mgmt/v1.2/rest", username: "admin", verify_tls: false};
+  openDialog(`<form id="clf"><h2>${isNew ? "Add cluster" : `Edit ${esc(c.name)}`}</h2><div class="stack">
+    <div><label class="f" for="cl-name">Name</label><input type="text" id="cl-name" value="${esc(c.name || "")}" placeholder="e.g. JV-HS-A (defaults to the address)"></div>
+    <div class="grid2" style="grid-template-columns:2fr 1fr"><div><label class="f" for="cl-host">Management address (IP or FQDN)</label><input type="text" id="cl-host" value="${esc(c.host || "")}" placeholder="10.200.10.160 or anvil.example.com" required></div>
+      <div><label class="f" for="cl-port">Port</label><input type="number" id="cl-port" value="${esc(c.port)}" min="1" max="65535"></div></div>
+    <div><label class="f" for="cl-base">API path</label><input type="text" id="cl-base" class="mono" value="${esc(c.base_path)}"></div>
+    <div class="grid2"><div><label class="f" for="cl-user">Username</label><input type="text" id="cl-user" value="${esc(c.username || "")}" autocomplete="off"></div>
+      <div><label class="f" for="cl-pass">Password</label><input type="password" id="cl-pass" autocomplete="new-password" placeholder="${c.has_password ? "Saved; type to replace" : ""}"></div></div>
+    <label class="check"><input type="checkbox" id="cl-save" ${c.has_password || isNew ? "checked" : ""}>Save the password <span class="hint" style="font-weight:400">(otherwise you're asked for it each time; saved passwords are readable only by the service)</span></label>
+    <label class="check"><input type="checkbox" id="cl-verify" ${c.verify_tls ? "checked" : ""}>Verify the cluster's TLS certificate <span class="hint" style="font-weight:400">(leave off for a self-signed certificate)</span></label>
+    <div class="row"><button type="button" id="cl-test">Test connection</button><span class="status-line" id="cl-status"></span></div>
+  </div><div class="actions"><button data-close>Cancel</button><button class="primary" type="submit">${isNew ? "Add cluster" : "Save cluster"}</button></div></form>`, d => {
+    const body = () => ({name: $("#cl-name", d).value, host: $("#cl-host", d).value, port: $("#cl-port", d).value,
+      base_path: $("#cl-base", d).value, username: $("#cl-user", d).value, password: $("#cl-pass", d).value,
+      save_password: $("#cl-save", d).checked, verify_tls: $("#cl-verify", d).checked});
+    const save = async () => { const r = await api(isNew && !c.id ? "/api/clusters" : `/api/clusters/${c.id}`, {method: isNew && !c.id ? "POST" : "PUT", body: body()}); c = {...c, ...r}; return r; };
+    $("#cl-test", d).onclick = async () => {
+      const st = $("#cl-status", d); st.className = "status-line"; st.textContent = "Connecting…";
+      try {
+        await save();   // test what's on screen
+        const typed = $("#cl-pass", d).value;
+        const r = await api(`/api/clusters/${c.id}/test`, {method: "POST", body: typed ? {password: typed} : {}});
+        st.className = "status-line ok"; st.textContent = `✓ Connected${r.cluster ? ` to ${r.cluster}` : ""}`;
+      } catch (err) { st.className = "status-line bad"; st.textContent = err.message; }
+    };
+    $("#clf", d).onsubmit = async e => {
+      e.preventDefault();
+      try { await save(); dlg.close(); toast(isNew ? "Cluster added" : "Cluster saved"); renderClusters(); }
+      catch (err) { toast(err.message, true); }
+    };
+  });
+}
 
 // ---- mount server: a DSX data address, never the Anvil / cluster management address
 function serverField(id, value, label = "Mount from (DSX data address)") {
@@ -491,7 +569,7 @@ function serverField(id, value, label = "Mount from (DSX data address)") {
     <div class="hint" id="${id}-hint">An address on a DSX node's interface with the DATA role, not the Anvil's.</div>
     <div class="status-line bad" id="${id}-warn" hidden></div>`;
 }
-function wireServerField(d, id, known = {}) {
+function wireServerField(d, id, known = {}, clusterOf = () => known.cluster_id) {
   const st = {data: known.data || [], anvil: known.anvil || [], cluster_host: known.cluster_host || null};
   const input = $(`#${id}`, d);
   const fill = () => {
@@ -509,15 +587,19 @@ function wireServerField(d, id, known = {}) {
   $(`#${id}-find`, d).onclick = async () => {
     const b = $(`#${id}-find`, d); b.disabled = true; b.textContent = "Looking up…";
     try {
-      const r = await clusterApi("/api/cluster-api/mount-addresses", "Looking up DSX data addresses");
+      const cid = clusterOf();
+      if (!cid) { toast("Choose the share's cluster to look up its DSX data addresses", true); return; }
+      const r = await clusterApi(cid, `/api/clusters/${cid}/mount-addresses`, "Looking up DSX data addresses");
       Object.assign(st, r);
       if (!r.data.length) toast("The cluster API returned no DSX interfaces with the DATA role", true);
       else if (!input.value.trim() || r.anvil.includes(input.value.trim()) || input.value.trim() === r.cluster_host) input.value = r.data[0].address;
       fill(); check();
-    } catch (err) { if (!["cancelled", "not configured"].includes(err.message)) toast(err.message, true); }
+    } catch (err) { quietErr(err); }
     finally { b.disabled = false; b.textContent = "Find DSX data addresses"; }
   };
-  if (!st.cluster_host) api("/api/cluster-api").then(c => { st.cluster_host = c.host || null; check(); });
+  // the Anvil warning compares with the chosen cluster's management address (any cluster when none is chosen)
+  api("/api/clusters").then(cs => { const c = cs.find(x => x.id === clusterOf());
+    st.cluster_host = st.cluster_host || (c ? c.host : null); st.anvil = [...st.anvil, ...(c ? [] : cs.map(x => x.host))]; check(); });
   fill(); check();
 }
 
@@ -529,23 +611,28 @@ function insecureReminder(names) {
     (the IP address the cluster sees it connect from) that allows insecure ports.${names.length > 1 ? `<div class="hint mono" style="margin-top:4px">${names.map(esc).join(", ")}</div>` : ""}`;
 }
 
-function importDialog() {
-  openDialog(`<form id="imf"><h2>Import shares from the cluster</h2><div class="stack">
+async function importDialog() {
+  const clusters = await api("/api/clusters");
+  openDialog(`<form id="imf"><h2>Import shares from a cluster</h2><div class="stack">
+    <div><label class="f" for="im-cluster">Cluster</label><select id="im-cluster">${clusterOptions(clusters, clusters[0] && clusters[0].id, "Not linked to a cluster (paste only)")}</select>
+      <div class="hint">${clusters.length ? "The shares are linked to this cluster." : `No clusters yet: <a href="#/clusters">add one</a> to fetch through its API, or paste share-list output.`}</div></div>
     <div class="row" style="justify-content:space-between;border:1px solid var(--rule);padding:10px 12px">
-      <div><b>From the cluster API</b><div class="hint" id="im-api-hint">Reads the share list directly from the cluster.</div></div>
+      <div><b>From the cluster's API</b><div class="hint">Reads the share list and the DSX data addresses to mount from.</div></div>
       <button type="button" class="primary" id="im-fetch">Fetch shares</button></div>
     <p class="hint" style="margin:0"><b>Or</b> run <code>share-list</code> on the cluster and upload or paste its output. You'll choose the shares to add next.</p>
-    <textarea id="im-text" style="min-height:240px" placeholder="Paste the output of share-list here"></textarea>
+    <textarea id="im-text" style="min-height:200px" placeholder="Paste the output of share-list here"></textarea>
     <label class="btn" style="align-self:flex-start">Upload file<input type="file" id="im-file" hidden accept=".txt,text/plain"></label>
   </div><div class="actions"><button data-close>Cancel</button><button class="primary" type="submit">Continue</button></div></form>`, d => {
-    api("/api/cluster-api").then(c => { $("#im-api-hint", d).innerHTML = c.configured ? `Reads the share list from <b>${esc(c.host)}</b>.` : `Set up the cluster API in <a href="#/settings">Settings</a> first.`; });
+    const cid = () => $("#im-cluster", d).value;
+    const syncFetch = () => { $("#im-fetch", d).disabled = !cid(); };
+    $("#im-cluster", d).onchange = syncFetch; syncFetch();
     $("#im-fetch", d).onclick = async () => {
       const b = $("#im-fetch", d); b.disabled = true; b.textContent = "Fetching…";
       try {
-        const r = await clusterApi("/api/shares/import/fetch", "Fetching the share list");
+        const r = await clusterApi(cid(), `/api/clusters/${cid()}/shares`, "Fetching the share list");
         if (!r.shares.length) { toast("The cluster has no shares besides the root share", true); return; }
         importPick(r);
-      } catch (err) { if (!["cancelled", "not configured"].includes(err.message)) toast(err.message, true); }
+      } catch (err) { quietErr(err); }
       finally { if (document.body.contains(b)) { b.disabled = false; b.textContent = "Fetch shares"; } }
     };
     $("#im-file", d).onchange = async e => { const f = e.target.files[0]; if (f) { $("#im-text", d).value = await f.text(); $("#imf", d).requestSubmit(); } };
@@ -553,14 +640,15 @@ function importDialog() {
       e.preventDefault();
       const r = await act(() => api("/api/shares/import/parse", {method: "POST", body: {text: $("#im-text", d).value}}));
       if (!r.shares.length) { toast("The list has no shares besides the root share", true); return; }
-      importPick(r);
+      const c = clusters.find(x => x.id === cid());
+      importPick({...r, cluster_id: cid() || null, cluster_name: c ? c.name : null, cluster_host: c ? c.host : null});
     };
   }, "min(860px,94vw)");
 }
 
 function importPick(parsed) {
   const shares = parsed.shares;
-  openDialog(`<form id="ipf"><h2>Choose shares to add</h2><div class="stack">
+  openDialog(`<form id="ipf"><h2>Choose shares to add${parsed.cluster_name ? ` from ${esc(parsed.cluster_name)}` : ""}</h2><div class="stack">
     <div class="grid2"><div>${serverField("ip-server", parsed.server)}</div>
       <div><label class="f">Protocol</label><div class="row" style="gap:18px;min-height:32px">
         <label class="check"><input type="checkbox" id="ip-nfs" checked>NFS</label><label class="check"><input type="checkbox" id="ip-smb">SMB</label></div>
@@ -578,7 +666,7 @@ function importPick(parsed) {
     <div class="row" style="gap:18px"><label class="check"><input type="checkbox" id="ip-mount" checked>Mount them now</label>
       <label class="check"><input type="checkbox" id="ip-auto" checked>Mount when the service starts</label></div>
   </div><div class="actions"><button data-close>Cancel</button><button class="primary" type="submit" id="ip-go">Add shares</button></div></form>`, d => {
-    wireServerField(d, "ip-server", {...(parsed.addresses || {}), cluster_host: parsed.cluster_host});
+    wireServerField(d, "ip-server", {...(parsed.addresses || {}), cluster_host: parsed.cluster_host, cluster_id: parsed.cluster_id});
     const boxes = $$("[data-i]", d);
     const sel = () => boxes.filter(b => b.checked).map(b => shares[+b.dataset.i]);
     const protos = () => ["nfs", "smb"].filter(p => $(`#ip-${p}`, d).checked);
@@ -608,7 +696,7 @@ function importPick(parsed) {
       $("#ip-go", d).disabled = true; $("#ip-go", d).textContent = $("#ip-mount", d).checked ? "Adding and mounting…" : "Adding…";
       try {
         const r = await api("/api/shares/import", {method: "POST", body: {
-          server: $("#ip-server", d).value.trim(), protocols, shares: picked.map(s => ({name: s.name, path: s.path})),
+          cluster_id: parsed.cluster_id || null, server: $("#ip-server", d).value.trim(), protocols, shares: picked.map(s => ({name: s.name, path: s.path})),
           username: $("#ip-user", d).value, password: $("#ip-pass", d).value, domain: $("#ip-dom", d).value,
           mount: $("#ip-mount", d).checked, auto_mount: $("#ip-auto", d).checked}});
         const strict = protocols.includes("nfs") ? picked.filter(s => !s.insecure_allowed).map(s => s.name) : [];
@@ -630,9 +718,12 @@ function importResult(r, strict) {
   </div><div class="actions"><button class="primary" data-close>Done</button></div></div>`, null, "min(760px,94vw)");
 }
 
-function shareDialog(s) {
+async function shareDialog(s) {
   s = s || {kind:"nfs", auto_mount:true};
+  const clusters = await api("/api/clusters");
+  if (!s.id && clusters.length === 1) s.cluster_id = clusters[0].id;
   openDialog(`<form id="sf"><h2>${s.id ? "Edit share" : "Add share"}</h2><div class="stack">
+    <div><label class="f" for="s-cluster">Cluster</label><select id="s-cluster">${clusterOptions(clusters, s.cluster_id, "Not linked to a cluster")}</select></div>
     <div><label class="f" for="s-name">Name</label><input type="text" id="s-name" value="${esc(s.name)}" required placeholder="Projects"></div>
     <div><label class="f">Connection</label><div class="seg" id="s-kind">
       ${[["nfs","NFS v3"],["smb","SMB"],["local","Already mounted"]].map(([k,l]) => `<button type="button" data-k="${k}" aria-pressed="${s.kind===k}">${l}</button>`).join("")}</div></div>
@@ -652,13 +743,13 @@ function shareDialog(s) {
         <div style="margin-top:12px"><label class="f" for="s-opts">Mount options</label><input type="text" id="s-opts" class="mono" value="${esc(s.options || "")}" placeholder="${esc(CAT.mount_defaults[kind])}">
         <div class="hint">${kind === "smb" ? "Leave blank for the default shown. If you set your own, noserverino is still added, since hstk needs it on SMB." : "Leave blank for the default shown. v3 mounts always get nolock. Keep attribute caching on: actimeo=0 or noac make hs fail with stale file handles."}</div></div>`;
     };
-    const drawFields = () => { fields(); if (kind !== "local") wireServerField(d, "s-server"); };
+    const drawFields = () => { fields(); if (kind !== "local") wireServerField(d, "s-server", {}, () => $("#s-cluster", d).value); };
     drawFields();
     $$("#s-kind button", d).forEach(b => b.onclick = () => { kind = b.dataset.k; $$("#s-kind button", d).forEach(x => x.setAttribute("aria-pressed", x === b)); drawFields(); });
     $("#sf", d).onsubmit = async e => {
       e.preventDefault();
       const v = id => $(id, d)?.value?.trim();
-      const body = {name: v("#s-name"), kind, auto_mount: $("#s-auto", d).checked, server: v("#s-server"), export: v("#s-export"),
+      const body = {name: v("#s-name"), kind, cluster_id: $("#s-cluster", d).value || null, auto_mount: $("#s-auto", d).checked, server: v("#s-server"), export: v("#s-export"),
         options: v("#s-opts"), username: v("#s-user"), password: $("#s-pass", d)?.value || "", domain: v("#s-dom"), local_path: v("#s-local")};
       await act(() => s.id ? api(`/api/shares/${s.id}`, {method:"PUT", body}) : api("/api/shares", {method:"POST", body}), s.id ? "Share saved" : "Share added");
       dlg.close(); renderShares();
@@ -669,7 +760,7 @@ function shareDialog(s) {
 // ---------------------------------------------------------------- reports list
 async function renderReports() {
   const [defs, shares, runs] = await Promise.all([api("/api/definitions"), api("/api/shares"), api("/api/runs?limit=500")]);
-  const shareName = Object.fromEntries(shares.map(s => [s.id, s.name]));
+  const shareName = Object.fromEntries(shares.map(s => [s.id, shareLabel(s)]));
   const lastRun = {}; runs.forEach(r => { if (r.definition_id && !lastRun[r.definition_id]) lastRun[r.definition_id] = r; });
   const kind = d => d.mode === "sum" ? "Summary" : d.mode === "eval" ? (d.eval?.source === "system" ? "System query" : "File listing") : "Custom";
   view.innerHTML = `
@@ -729,7 +820,7 @@ async function renderDesigner(id) {
         <div><label class="f" for="d-desc">Description</label><input type="text" id="d-desc" value="${esc(D.description)}" placeholder="Optional"></div>
       </section>
       <section class="panel stack"><h2>Where</h2>
-        ${shares.length ? `<div><label class="f" for="d-share">Share</label><select id="d-share">${shares.map(s => `<option value="${s.id}" ${s.id===D.share_id?"selected":""}>${esc(s.name)}${s.status.mounted ? "" : " (not mounted)"}</option>`).join("")}</select></div>
+        ${shares.length ? `<div><label class="f" for="d-share">Share</label><select id="d-share">${shares.map(s => `<option value="${s.id}" ${s.id===D.share_id?"selected":""}>${esc(shareLabel(s))}${s.status.mounted ? "" : " (not mounted)"}</option>`).join("")}</select></div>
         <div><label class="f" for="d-addpath">Folders to scan</label><div class="chips" id="d-paths" style="margin-bottom:8px"></div>
           <div class="row" style="flex-wrap:nowrap"><input type="text" id="d-addpath" class="mono" placeholder="/projects/2026" style="flex:1">
             <button type="button" id="d-addpath-btn">Add</button><button type="button" id="d-browse">Browse…</button></div>
@@ -1008,7 +1099,7 @@ async function renderRuns() {
   const runs = await api("/api/runs");
   view.innerHTML = `<header class="page"><div><h1>Results</h1><p class="sub">Every report run, newest first. Scheduled runs are pruned to each schedule's retention setting.</p></div></header>
   <div class="panel">${runs.length ? `<div class="scroll"><table class="data"><thead><tr><th>Report</th><th>Share</th><th>Started</th><th>Took</th><th>How</th><th class="num">Rows</th><th>Status</th><th></th></tr></thead><tbody>
-    ${runs.map(r => `<tr><td><a href="#/run/${r.id}"><b>${esc(r.name)}</b></a></td><td>${esc(r.share_name || "")}</td><td>${when(r.started)}</td>
+    ${runs.map(r => `<tr><td><a href="#/run/${r.id}"><b>${esc(r.name)}</b></a></td><td>${esc(r.cluster_name ? r.cluster_name + " · " + (r.share_name || "") : (r.share_name || ""))}</td><td>${when(r.started)}</td>
       <td>${dur(r.started, r.finished)}</td><td>${esc(r.trigger)}</td><td class="num">${num(r.row_count)}</td><td>${statusPill(r.status)}</td>
       <td><button class="ghost danger" data-del="${r.id}">Delete</button></td></tr>`).join("")}
   </tbody></table></div>` : `<div class="empty"><p>No results yet. Run a report to see it here.</p><a class="btn primary" href="#/reports">Go to reports</a></div>`}</div>`;
@@ -1044,7 +1135,7 @@ async function renderRun(id) {
     const qs = new URLSearchParams({fields: v.columns.join(","), sort_by: v.display.sort_by || "", sort_desc: v.display.sort_desc !== false, size_unit: unit});
     view.innerHTML = `
     <header class="page"><div><h1>${esc(r.name)}</h1>
-      <div class="meta" style="margin-top:8px">${statusPill(r.status)}<span>Share <b>${esc(r.share_name || "—")}</b></span><span>Started <b>${when(r.started)}</b></span>
+      <div class="meta" style="margin-top:8px">${statusPill(r.status)}${r.cluster_name ? `<span>Cluster <b>${esc(r.cluster_name)}</b></span>` : ""}<span>Share <b>${esc(r.share_name || "—")}</b></span><span>Started <b>${when(r.started)}</b></span>
       ${r.finished ? `<span>Took <b>${dur(r.started, r.finished)}</b></span>` : ""}<span><b>${num(r.row_count)}</b> rows</span><span>${esc(r.trigger)}</span></div></div>
       <div class="row">${r.definition_id ? `<a class="btn" href="#/design/${r.definition_id}">Edit report</a><button id="rerun">Run again</button>` : ""}
         <details class="menu"><summary class="btn primary">Download</summary><div class="menu-pop">
@@ -1273,7 +1364,7 @@ function crawlNote(c, maxHs) {
 
 // ---------------------------------------------------------------- settings
 async function renderSettings() {
-  let [S, A, C] = await Promise.all([api("/api/settings"), api("/api/auth"), api("/api/cluster-api")]);
+  let [S, A] = await Promise.all([api("/api/settings"), api("/api/auth")]);
   let draft = {...S.values};
   const L = S.limits;
   const field = (key, unit, step = 1, label) => `<div><label class="f" for="st-${key}">${esc(label || L[key].label)}</label>
@@ -1300,24 +1391,7 @@ async function renderSettings() {
         </div>
         <p class="hint" style="margin:0">The cap on hs commands applies across all reports, schedules and scans together, whatever the crawl speed asks for. Reports and scans beyond the limit wait in a queue.</p>
       </section>
-      <section class="panel stack" id="st-capi"><h2>Cluster API</h2>
-        <p class="hint" style="margin-top:-6px">The Hammerspace management API, for fetching shares, volumes, volume groups and objectives instead of pasting CLI output. Saved with its own button.</p>
-        <form id="capi-form" class="stack">
-          <div class="grid2" style="grid-template-columns:2fr 1fr 2fr">
-            <div><label class="f" for="ca-host">Cluster IP address or FQDN</label><input type="text" id="ca-host" value="${esc(C.host)}" placeholder="10.200.10.160 or anvil.example.com"></div>
-            <div><label class="f" for="ca-port">Port</label><input type="number" id="ca-port" value="${esc(C.port)}" min="1" max="65535"></div>
-            <div><label class="f" for="ca-base">API path</label><input type="text" id="ca-base" class="mono" value="${esc(C.base_path)}"></div></div>
-          <div class="grid2" style="grid-template-columns:2fr 2fr 1fr">
-            <div><label class="f" for="ca-user">Username</label><input type="text" id="ca-user" value="${esc(C.username)}" autocomplete="off"></div>
-            <div><label class="f" for="ca-pass">Password</label><input type="password" id="ca-pass" autocomplete="new-password" placeholder="${C.has_password ? "Saved; type to replace" : ""}"></div>
-            <div style="padding-top:26px"><label class="check"><input type="checkbox" id="ca-save" ${C.has_password || !C.configured ? "checked" : ""}>Save the password</label></div></div>
-          <label class="check"><input type="checkbox" id="ca-verify" ${C.verify_tls ? "checked" : ""}>Verify the cluster's TLS certificate <span class="hint" style="font-weight:400">(leave off for a self-signed certificate)</span></label>
-          <div class="row"><button type="submit" class="primary">Save connection</button><button type="button" id="ca-test">Test connection</button>
-            <span class="status-line" id="ca-status"></span><span class="spacer"></span>
-            <a class="hint" href="/api/cluster-api/responses">Last API responses (for troubleshooting)</a></div>
-        </form>
-        <p class="hint" style="margin:0">Without a saved password, you're asked for it each time data is fetched. A saved password is kept in /data/cluster-api.json, readable only by the service; use an account that can read the cluster's configuration.</p>
-      </section>
+      <section class="panel"><h2>Clusters</h2><p class="hint" style="margin:0">Cluster connections (management API address, user and password) are on the <a href="#/clusters">Clusters</a> page.</p></section>
       <section class="panel stack" id="st-auth"><h2>Sign-in</h2>
         ${A.enabled ? `
           <p style="margin:0">Signed in as <b>${esc(A.username)}</b>. ${A.source === "settings" ? "The password was set on this page." : "The password comes from HSR_PASSWORD in docker-compose.yml; once changed here, the new one is used instead."}</p>
@@ -1364,25 +1438,6 @@ async function renderSettings() {
       const d = JSON.stringify(draft) !== JSON.stringify(S.values);
       $("#st-save").disabled = !d; $("#st-save").textContent = d ? "Save settings" : "Saved";
     });
-    const capiBody = () => ({host: $("#ca-host").value, port: $("#ca-port").value, base_path: $("#ca-base").value,
-      username: $("#ca-user").value, password: $("#ca-pass").value, save_password: $("#ca-save").checked, verify_tls: $("#ca-verify").checked});
-    $("#capi-form").onsubmit = async e => {
-      e.preventDefault();
-      $("#ca-status").textContent = "";
-      try { C = await api("/api/cluster-api", {method: "PUT", body: capiBody()}); $("#ca-pass").value = "";
-        $("#ca-pass").placeholder = C.has_password ? "Saved; type to replace" : ""; toast("Cluster API connection saved"); }
-      catch (err) { toast(err.message, true); }
-    };
-    $("#ca-test").onclick = async () => {
-      const st = $("#ca-status"); st.className = "status-line"; st.textContent = "Connecting…";
-      try {
-        C = await api("/api/cluster-api", {method: "PUT", body: capiBody()});   // test what's on screen
-        const typed = $("#ca-pass").value;
-        const r = typed || C.has_password ? await api("/api/cluster-api/test", {method: "POST", body: typed ? {password: typed} : {}})
-          : await clusterApi("/api/cluster-api/test", "Testing the connection");
-        st.className = "status-line ok"; st.textContent = `✓ Connected${r.cluster ? ` to ${r.cluster}` : ""}`;
-      } catch (err) { if (err.message !== "cancelled") { st.className = "status-line bad"; st.textContent = err.message; } else st.textContent = ""; }
-    };
     $("#pw-lost") && ($("#pw-lost").onclick = e => { e.preventDefault(); $("#pw-lost-text").hidden = false; });
     const signInAgain = msg => { toast(msg); setTimeout(() => location.reload(), 1800); };
     $("#pw-form") && ($("#pw-form").onsubmit = async e => {
@@ -1428,7 +1483,7 @@ async function renderPlans() {
   <header class="page"><div><h1>Objectives</h1><p class="sub">Model share objectives before applying them: scan a share for the metadata your conditions use, add the cluster's volumes and objectives, and see how much space each volume would need.</p></div>
     <button class="primary" id="new-plan">New plan</button></header>
   <div class="panel">${plans.length ? `<div class="scroll"><table class="data"><thead><tr><th>Plan</th><th>Share and folder</th><th class="num">Objectives</th><th>Scan</th><th>Calculated</th><th></th></tr></thead><tbody>
-    ${plans.map(p => `<tr><td><a href="#/plan/${p.id}"><b>${esc(p.name)}</b></a></td><td>${esc(p.share_name || "Missing share")} <span class="mono">${esc(p.root)}</span></td>
+    ${plans.map(p => `<tr><td><a href="#/plan/${p.id}"><b>${esc(p.name)}</b></a></td><td>${p.cluster_name ? esc(p.cluster_name) + " · " : ""}${esc(p.share_name || "Missing share")} <span class="mono">${esc(p.root)}</span></td>
       <td class="num">${p.rows}</td><td>${p.scan.status ? statusPill(p.scan.status) + ` <span class="hint">${p.scan.files != null ? num(p.scan.files) + " files" : ""}</span>` : `<span class="hint">Not scanned</span>`}</td>
       <td>${p.calculated ? when(p.calculated) : `<span class="hint">Not yet</span>`}</td>
       <td><div class="row" style="justify-content:flex-end"><a class="btn ghost" href="#/plan/${p.id}">Open</a><button class="ghost danger" data-del="${p.id}">Delete</button></div></td></tr>`).join("")}
@@ -1443,7 +1498,7 @@ async function newPlanDialog() {
   if (!shares.length) { toast("Add a share first", true); location.hash = "#/shares"; return; }
   openDialog(`<form id="npf"><h2>New plan</h2><div class="stack">
     <div><label class="f" for="np-name">Name</label><input type="text" id="np-name" placeholder="Home share tiering" required></div>
-    <div><label class="f" for="np-share">Share</label><select id="np-share">${shares.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select></div>
+    <div><label class="f" for="np-share">Share</label><select id="np-share">${shares.map(s => `<option value="${s.id}">${esc(shareLabel(s))}</option>`).join("")}</select></div>
     <div><label class="f" for="np-root">Folder to model</label><div class="row" style="flex-wrap:nowrap"><input type="text" id="np-root" class="mono" value="/"><button type="button" id="np-browse">Browse…</button></div>
       <div class="hint">Use / for the whole share.</div></div>
   </div><div class="actions"><button data-close>Cancel</button><button class="primary" type="submit">Create plan</button></div></form>`, d => {
@@ -1461,7 +1516,7 @@ function newPlanDialogRestore(name, sid, path) {
 async function renderPlan(id) {
   if (!PCAT) PCAT = await api("/api/plan-catalog");
   let P = await api(`/api/plans/${id}`);
-  const shares = await api("/api/shares");
+  const [shares, clustersCache] = await Promise.all([api("/api/shares"), api("/api/clusters")]);
   let result = P.has_result ? await api(`/api/plans/${id}/result`).catch(() => null) : null;
   let saveTimer = null, pending = {};
 
@@ -1481,7 +1536,7 @@ async function renderPlan(id) {
 
   const head = () => {
     $("#pl-title").textContent = P.name;
-    $("#pl-sub").innerHTML = `${esc(P.share_name || "No share")} <span class="mono">${esc(P.root)}</span>`;
+    $("#pl-sub").innerHTML = `${P.linked_cluster ? esc(P.linked_cluster.name) + " · " : ""}${esc(P.share_name || "No share")} <span class="mono">${esc(P.root)}</span>`;
   };
   function save(patch, redraw = []) {
     Object.assign(pending, patch); Object.assign(P, patch);
@@ -1504,12 +1559,12 @@ async function renderPlan(id) {
       <div class="grid2"><div><label class="f" for="p-name">Plan name</label><input type="text" id="p-name" value="${esc(P.name)}"></div>
         <div><label class="f" for="p-cshare">Share name on the cluster</label><input type="text" id="p-cshare" class="mono" value="${esc(P.cluster_share || "")}">
           <div class="hint">Used in the generated share-objective-add commands.</div></div></div>
-      <div class="grid2" style="margin-top:12px"><div><label class="f" for="p-share">Share</label><select id="p-share">${shares.map(s => `<option value="${s.id}" ${s.id === P.share_id ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></div>
+      <div class="grid2" style="margin-top:12px"><div><label class="f" for="p-share">Share</label><select id="p-share">${shares.map(s => `<option value="${s.id}" ${s.id === P.share_id ? "selected" : ""}>${esc(shareLabel(s))}</option>`).join("")}</select></div>
         <div><label class="f" for="p-root">Folder to model</label><div class="row" style="flex-wrap:nowrap"><input type="text" id="p-root" class="mono" value="${esc(P.root)}"><button type="button" id="p-browse">Browse…</button></div>
           <div class="hint">Objective scopes and conditions are tested against everything below this folder. Changing it needs a new scan.</div></div></div>`;
     $("#p-name").oninput = e => { save({name: e.target.value}); head(); };
     $("#p-cshare").oninput = e => save({cluster_share: e.target.value});
-    $("#p-share").onchange = e => { save({share_id: e.target.value}); };
+    $("#p-share").onchange = e => { save({share_id: e.target.value}, [head, draw3]); };   // the share's cluster may change
     $("#p-root").onchange = e => save({root: e.target.value});
     $("#p-browse").onclick = () => browseDialog($("#p-share").value, p => { $("#p-root").value = p; save({root: p}); });
   }
@@ -1590,9 +1645,10 @@ async function renderPlan(id) {
     const vols = [...(c.volumes || []), ...(c.object_volumes || [])];
     $("#s3").innerHTML = `<h2><span class="n">3</span>Cluster information</h2>
       <div class="row" style="margin-top:-6px;justify-content:space-between"><p class="hint" style="margin:0">Load everything from the cluster API, or upload or paste the output of the Hammerspace CLI commands below (the kind is detected from the contents).</p>
-        <button class="primary" id="api-load">Load all from the cluster API</button></div>
+        <div class="row" style="flex-wrap:nowrap;gap:6px">${P.linked_cluster ? "" : `<select id="api-cluster" style="width:auto" aria-label="Cluster to load from">${clusterOptions(clustersCache, null, "Choose a cluster…")}</select>`}
+          <button class="primary" id="api-load">${P.linked_cluster ? `Load all from ${esc(P.linked_cluster.name)}` : "Load all from the cluster"}</button></div></div>
       <div class="upl">${UPLOADS.map(([k, cmd, label]) => `<div class="card ${c[k] ? "ok" : ""}"><b>${label}</b><div><code>${cmd}</code></div>
-        <div class="status-line">${c[k] ? `${c[k].length} loaded ${(c.sources || {})[k] === "api" ? "from the cluster API" : "from a file"} · ${when(up[k])}` : "Not loaded"}</div>
+        <div class="status-line">${c[k] ? `${c[k].length} loaded ${(c.sources || {})[k] === "api" ? `from ${esc((c.source_cluster || {})[k] || "the cluster API")}` : "from a file"} · ${when(up[k])}` : "Not loaded"}</div>
         <div class="row" style="margin-top:6px;gap:6px"><label class="btn" style="min-height:28px;padding:3px 10px">Upload file<input type="file" data-up="${k}" hidden accept=".txt,text/plain"></label>
           <button style="min-height:28px;padding:3px 10px" data-paste="${k}">Paste</button>${c[k] ? `<button class="ghost danger" style="min-height:28px" data-clear="${k}">Clear</button>` : ""}</div></div>`).join("")}</div>
       ${vols.length ? `<h3 style="margin-top:14px">Volumes</h3><div class="scroll"><table class="data"><thead><tr><th>Volume</th><th>Type</th><th>Storage system</th><th>Access</th><th class="num">Free</th><th class="num">Total</th><th class="num">Availability</th><th class="num">Durability</th><th>Online delay</th><th>Groups</th></tr></thead><tbody>
@@ -1609,14 +1665,17 @@ async function renderPlan(id) {
     $("#api-load").onclick = async () => {
       const b = $("#api-load"); b.disabled = true; b.textContent = "Loading…";
       try {
-        const r = await clusterApi(`/api/plans/${id}/cluster/fetch`, "Loading volumes, volume groups and objectives");
-        P = r.plan;
+        const cid = P.linked_cluster ? P.linked_cluster.id : ($("#api-cluster") || {}).value;
+        if (!cid) { toast(clustersCache.length ? "Choose the cluster to load from" : "Add a cluster on the Clusters page first", true); return; }
+        const r = await clusterApi(cid, `/api/plans/${id}/cluster/fetch`, "Loading volumes, volume groups and objectives",
+                                   P.linked_cluster ? {} : {cluster_id: cid});
+        P = r.plan; head();
         const c = r.counts;
         const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
         toast(`Loaded ${n(c.volumes, "storage volume", "storage volumes")}, ${n(c.object_volumes, "object volume", "object volumes")}, ${n(c.volume_groups, "volume group", "volume groups")} and ${n(c.objectives, "objective", "objectives")}`);
         draw3(); draw4(); draw5(); drawChecks();
       } catch (err) { if (!["cancelled", "not configured"].includes(err.message)) toast(err.message, true); }
-      finally { if ($("#api-load")) { $("#api-load").disabled = false; $("#api-load").textContent = "Load all from the cluster API"; } }
+      finally { if ($("#api-load")) { $("#api-load").disabled = false; $("#api-load").textContent = P.linked_cluster ? `Load all from ${P.linked_cluster.name}` : "Load all from the cluster"; } }
     };
     $$("[data-up]").forEach(inp => inp.onchange = async () => { const f = inp.files[0]; if (f) upload(await f.text(), inp.dataset.up); });
     $$("[data-paste]").forEach(b => b.onclick = () => openDialog(`<form id="pf"><h2>Paste ${UPLOADS.find(u => u[0] === b.dataset.paste)[1]}</h2>

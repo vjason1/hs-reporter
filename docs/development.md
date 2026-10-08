@@ -15,6 +15,9 @@ app/
   clusterinfo.py parsers for volume-list, object-volume-list, volume-group-list, objective-list
   objexpr.py     objective conditions: parse, validate, evaluate
   objplan.py     objective planning: scan, placement model, space per volume, commands
+  hsapi.py       clusters and their management API: login, lists, mapping to the CLI structures
+  settings.py    global settings (crawl speed, limits, mount defaults)
+  auth.py        sign-in
   static/        the single-page web GUI (index.html)
 tests/
   fake_hs.py     stand-in for the hs command, answering like Hammerspace

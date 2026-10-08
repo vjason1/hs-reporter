@@ -16,7 +16,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import hsparse, settings, shares, store
+from . import hsapi, hsparse, settings, shares, store
 
 HS_BIN = os.environ.get("HSR_HS_BIN", "hs")
 # Timeouts, limits and crawl speed are global settings (app/settings.py, the Settings page).
@@ -765,6 +765,7 @@ def create_run(defn: dict, trigger: str = "manual", schedule_id: str | None = No
         "id": store.new_id(), "name": defn.get("name") or "Untitled report",
         "definition_id": defn.get("id"), "schedule_id": schedule_id, "trigger": trigger,
         "definition": defn, "share_name": share["name"] if share else None,
+        "cluster_name": (hsapi.clusters.get((share or {}).get("cluster_id") or "") or {}).get("name"),
         "mode": defn.get("mode"), "status": "queued", "started": store.now(),
         "finished": None, "outputs": [], "rows": [], "columns": [], "row_count": 0, "error": None,
     }

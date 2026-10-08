@@ -1,6 +1,7 @@
 # Hammerspace Reporter
 
-A containerized web service for Hammerspace administrators, with two jobs:
+A containerized web service for Hammerspace administrators, working with one or more clusters,
+with two jobs:
 
 - **Reporting.** Pick a share, choose a report, and it builds the HammerScript, runs it with the
   [Hammerspace Toolkit (hstk)](https://github.com/hammer-space/hstk) `hs sum` and `hs eval`
@@ -65,7 +66,9 @@ A containerized web service for Hammerspace administrators, with two jobs:
   for every report, schedule and scan, server-wide limits such as a cap on `hs` commands at
   once, default NFS and SMB mount options, and the sign-in password. Changes apply without a
   restart.
-- **Share management**: import shares from the cluster (through its management API, or from
+- **Several clusters**: link any number of Hammerspace clusters through their management APIs.
+  Shares and objective plans belong to a cluster, and everything shows which one.
+- **Share management**: import shares from a cluster (through its management API, or from
   `share-list` output) over NFS, SMB or both, or add them one by one. The container mounts NFS or SMB shares itself, or uses shares
   already mounted on the host, and detects and recovers stale mounts.
 - **A console-style GUI** with Hammerspace's look, optional sign-in, and a JSON API for
@@ -83,9 +86,10 @@ cd hs-reporter
 docker compose up -d --build
 ```
 
-Open <http://localhost:8080> and sign in, then add shares: **Shares** → **Import from cluster**
-and paste the output of the cluster's `share-list` command, or **Add share** to enter one by
-hand. If NFS mounts are refused, see [Privileged ports](docs/shares.md#importing-shares-from-the-cluster).
+Open <http://localhost:8080> and sign in. Add your clusters on the **Clusters** page (each
+cluster's management address, user and password), then add shares: **Shares** → **Import from
+cluster**, choose the cluster and fetch its share list (or paste `share-list` output), or
+**Add share** to enter one by hand. If NFS mounts are refused, see [Privileged ports](docs/shares.md#importing-shares-from-the-cluster).
 
 **To run a report:**
 
@@ -97,7 +101,7 @@ hand. If NFS mounts are refused, see [Privileged ports](docs/shares.md#importing
 
 1. **Objectives** → **New plan**: choose the share and the folder to model.
 2. Pick the fields your conditions will use, and **Scan**.
-3. **Load all from the cluster API**, or load the four CLI exports.
+3. **Load all from** the share's cluster, or load the four CLI exports.
 4. Add share objectives with scopes and conditions.
 5. **Calculate space**, review the warnings, and copy the commands.
 
@@ -120,7 +124,7 @@ On a Mac, see [Running on a Mac](docs/troubleshooting.md#running-on-a-mac) first
 |---|---|
 | [User guide](docs/user-guide.md) | Reports, the designer, editing HammerScript, results, exports, schedules |
 | [Objective planning](docs/objective-planning.md) | Scans, conditions, the placement model, space by target, warnings, commands |
-| [Shares and mounting](docs/shares.md) | NFS and SMB options, host-mounted shares, how hstk reaches the cluster |
+| [Clusters and shares](docs/shares.md) | Linking clusters, importing shares, DSX data addresses, NFS and SMB options |
 | [Configuration](docs/configuration.md) | The Settings page (crawl speed, limits, mount defaults), environment variables, sign-in, data |
 | [API](docs/api.md) | The JSON API behind the GUI, with examples |
 | [Troubleshooting](docs/troubleshooting.md) | Mount errors, stale file handles, running on a Mac |
