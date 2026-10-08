@@ -12,8 +12,10 @@ would need. It uses the same shares as reports.
    the share's name on the cluster, used as `--name` in the generated commands.
 2. **Fields to gather, and scan.** Choose the metadata your conditions use. Most designs need
    one to five fields; the scan asks Hammerspace for those and nothing else.
-3. **Cluster information.** Upload or paste the output of `volume-list --full`,
-   `object-volume-list --full`, `volume-group-list --full` and `objective-list --full`.
+3. **Cluster information.** **Load all from the cluster API** (set up under
+   [Settings → Cluster API](configuration.md#cluster-api)), or upload or paste the output of
+   `volume-list --full`, `object-volume-list --full`, `volume-group-list --full` and
+   `objective-list --full`. Each card says where its data came from.
 4. **Share objectives.** Add objectives, each with a scope and an optional condition.
 5. **Placement assumptions.** Adjust the default placement and size rules if needed.
 6. **Calculate space.** See the space needed per volume group or volume, warnings, and the

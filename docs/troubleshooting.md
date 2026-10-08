@@ -4,6 +4,7 @@
 
 | Message | Likely cause | What to do |
 |---|---|---|
+| Mounts fail, and the share is labeled **Anvil address** | The share mounts from the cluster management address (the Anvil) | Edit the share and use a DSX data address: **Find DSX data addresses** lists them |
 | `mount.nfs: access denied by server` (export open to everyone) | The export requires privileged source ports (`Insecure: false`), and the container's traffic arrives from other ports | Enable insecure ports on the share's export, or add an export rule for this machine's IP that allows them, or mount on the host |
 | `mount.nfs: Operation not permitted` with `vers=4.2` | NFS 4.2 is limited to approved client kernels | Use NFSv3 (the default), or run on a host with an approved kernel |
 | `rpc.statd is not running but is required for remote locking` | NFSv3 without `nolock` | Add `nolock` (the default options include it) |

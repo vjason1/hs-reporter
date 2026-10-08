@@ -1,0 +1,128 @@
+[
+ {
+  "_type": "NETWORK_IF",
+  "uoid": {
+   "uuid": "b8b16e3d-0d05-40e9-b627-f0b4a2f42bc6",
+   "objectType": "NETWORK_IF"
+  },
+  "name": "ens256",
+  "node": {
+   "_type": "NODE",
+   "uoid": {
+    "uuid": "22304c53-39f7-50aa-a885-be632b2f8241",
+    "objectType": "NODE"
+   },
+   "name": "jv-t4-anvil-1.asgard.local",
+   "nodeType": "PD",
+   "productNodeType": "ANVIL",
+   "mgmtIpAddress": {
+    "address": "10.200.10.125",
+    "prefixLength": 24
+   }
+  },
+  "serviceState": "RUNNING",
+  "ipAddresses": [],
+  "rdmaAvailable": false,
+  "mtu": 1500,
+  "roles": []
+ },
+ {
+  "_type": "NETWORK_IF",
+  "uoid": {
+   "uuid": "ff90bc13-309b-4b08-b39f-b3468ff2820d",
+   "objectType": "NETWORK_IF"
+  },
+  "name": "ens224",
+  "node": {
+   "_type": "NODE",
+   "uoid": {
+    "uuid": "22304c53-39f7-50aa-a885-be632b2f8241",
+    "objectType": "NODE"
+   },
+   "name": "jv-t4-anvil-1.asgard.local",
+   "nodeType": "PD",
+   "productNodeType": "ANVIL",
+   "mgmtIpAddress": {
+    "address": "10.200.10.125",
+    "prefixLength": 24
+   }
+  },
+  "serviceState": "RUNNING",
+  "ipAddresses": [
+   {
+    "address": "10.200.10.125",
+    "prefixLength": 24
+   }
+  ],
+  "rdmaAvailable": false,
+  "mtu": 1500,
+  "roles": [
+   "DATA",
+   "MGMT"
+  ],
+  "linkSpeed": 10000000000
+ },
+ {
+  "_type": "NETWORK_IF",
+  "uoid": {
+   "uuid": "ab101e18-9fa8-4863-b231-cfbc60d5811f",
+   "objectType": "NETWORK_IF"
+  },
+  "name": "ens256",
+  "node": {
+   "_type": "NODE",
+   "uoid": {
+    "uuid": "e734f8ab-bda6-5c96-a818-02eb7ca34200",
+    "objectType": "NODE"
+   },
+   "name": "jv-t4-dsx-1.asgard.local",
+   "nodeType": "PD",
+   "productNodeType": "DSX",
+   "mgmtIpAddress": {
+    "address": "10.200.10.126",
+    "prefixLength": 24
+   }
+  },
+  "serviceState": "RUNNING",
+  "ipAddresses": [],
+  "rdmaAvailable": false,
+  "mtu": 1500,
+  "roles": []
+ },
+ {
+  "_type": "NETWORK_IF",
+  "uoid": {
+   "uuid": "eae2758a-0469-4f77-a1e1-7c79712ad1a4",
+   "objectType": "NETWORK_IF"
+  },
+  "name": "ens224",
+  "node": {
+   "_type": "NODE",
+   "uoid": {
+    "uuid": "e734f8ab-bda6-5c96-a818-02eb7ca34200",
+    "objectType": "NODE"
+   },
+   "name": "jv-t4-dsx-1.asgard.local",
+   "nodeType": "PD",
+   "productNodeType": "DSX",
+   "mgmtIpAddress": {
+    "address": "10.200.10.126",
+    "prefixLength": 24
+   }
+  },
+  "serviceState": "RUNNING",
+  "ipAddresses": [
+   {
+    "address": "10.200.10.126",
+    "prefixLength": 24
+   }
+  ],
+  "rdmaAvailable": false,
+  "mtu": 1500,
+  "roles": [
+   "DATA",
+   "MGMT"
+  ],
+  "linkSpeed": 10000000000
+ }
+]

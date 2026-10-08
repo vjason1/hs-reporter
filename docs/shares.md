@@ -12,15 +12,28 @@ mount doesn't have the gateway.
 
 **Shares → Import from cluster** adds shares from the cluster's own list:
 
-1. On the cluster, run `share-list` and upload or paste its output.
-2. Enter the cluster's IP address or FQDN, and choose **NFS**, **SMB** or both. With both, each
-   share is added twice, as "name (NFS)" and "name (SMB)". SMB needs a username and password.
+1. Click **Fetch shares** to read the list from the cluster API (set up under
+   [Settings → Cluster API](configuration.md#cluster-api)), or run `share-list` on the
+   cluster and upload or paste its output.
+2. Choose the address to **mount from**: a DSX data address (see below). Fetching through the
+   API fills it in; otherwise **Find DSX data addresses** looks them up. Choose **NFS**, **SMB**
+   or both. With both, each share is added twice, as "name (NFS)" and "name (SMB)". SMB needs a
+   username and password.
 3. Tick the shares to add. Published shares are ticked to start with; the root share (`/`)
    isn't offered, since reports and plans work inside a share.
 
 NFS shares use the share's path as the export (`/stowerstiertest`) and SMB shares use its name
 (`stowerstiertest`). Shares that are already set up with the same server and export are
 skipped. You can mount them right away and have them mounted when the service starts.
+
+**Mount from a DSX data address, not the Anvil.** Shares are served from the DSX nodes'
+data interfaces. The cluster's management address (the Anvil, which the cluster API uses) is
+the wrong place to mount from, even where its interface also has the DATA role. Use an address
+on a **DSX** node's interface with the **DATA** role. The cluster API's `/network-interfaces`
+lists them; the import and the **Add share** form offer them as suggestions (**Find DSX data
+addresses**), and warn when the address entered is the Anvil's. Shares already set up with the
+cluster API's address are labeled **Anvil address** on the Shares page: edit them and change
+the server to a DSX data address.
 
 **Privileged ports.** A share whose export options all say `Insecure: false` only accepts NFS
 connections from privileged (low-numbered) source ports. The machine running this app may

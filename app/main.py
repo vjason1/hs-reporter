@@ -9,7 +9,7 @@ from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import auth, clusterinfo, objexpr, objplan, reports, scheduler, settings, shares, store
+from . import auth, clusterinfo, hsapi, objexpr, objplan, reports, scheduler, settings, shares, store
 
 STATIC = Path(__file__).parent / "static"
 _tasks: set[asyncio.Task] = set()
@@ -76,6 +76,10 @@ SHARE_FIELDS = ("name", "kind", "server", "export", "options", "username", "pass
 def _public_share(s: dict) -> dict:
     out = {k: v for k, v in s.items() if k != "password"}
     out["has_password"] = bool(s.get("password"))
+    # Mounting from the cluster management address (the Anvil) doesn't work: flag it
+    host = hsapi.connection()["host"]
+    out["anvil_address"] = bool(host and s.get("kind") in ("nfs", "smb")
+                                and (s.get("server") or "").lower() == host.lower())
     try:
         out["status"] = shares.status(s)
     except shares.ShareError as e:
@@ -122,6 +126,19 @@ def parse_share_list(body: dict = Body(...)):
 
 
 _HOST_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$|^\[?[0-9A-Fa-f:]+\]?$")
+
+
+@app.post("/api/shares/import/fetch")
+async def fetch_share_list(body: dict | None = Body(None)):
+    """The same list as share-list, from the cluster API."""
+    try:
+        found, addresses = await hsapi.fetch_shares((body or {}).get("password"))
+    except hsapi.ApiError as e:
+        raise HTTPException(422, str(e))
+    # Mount from a DSX data address, never the Anvil / cluster management address
+    return {"shares": [s for s in found if not s["is_root"]], "root_excluded": sum(s["is_root"] for s in found),
+            "addresses": addresses, "cluster_host": hsapi.connection()["host"],
+            "server": addresses["data"][0]["address"] if addresses["data"] else ""}
 
 
 @app.post("/api/shares/import")
@@ -532,6 +549,44 @@ def put_settings(body: dict = Body(...)):
     return _settings_view()
 
 
+@app.get("/api/cluster-api")
+def get_cluster_api():
+    return hsapi.public_connection()
+
+
+@app.put("/api/cluster-api")
+def put_cluster_api(body: dict = Body(...)):
+    try:
+        return hsapi.save_connection(body)
+    except hsapi.ApiError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/cluster-api/test")
+async def test_cluster_api(body: dict | None = Body(None)):
+    try:
+        return await hsapi.test((body or {}).get("password"))
+    except hsapi.ApiError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/cluster-api/mount-addresses")
+async def cluster_mount_addresses(body: dict | None = Body(None)):
+    """DSX addresses on interfaces with the DATA role, to mount shares from."""
+    try:
+        return {**await hsapi.fetch_mount_addresses((body or {}).get("password")),
+                "cluster_host": hsapi.connection()["host"]}
+    except hsapi.ApiError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/api/cluster-api/responses")
+def cluster_api_responses():
+    if not hsapi.RAW_PATH.exists():
+        _404("No cluster API responses yet")
+    return FileResponse(hsapi.RAW_PATH, filename="cluster-api-responses.json", media_type="application/json")
+
+
 @app.get("/api/auth")
 def get_auth():
     return {**auth.config(), "min_length": auth.MIN_LENGTH}
@@ -684,10 +739,32 @@ def upload_cluster(pid: str, body: dict = Body(...)):
     c = p.get("cluster") or {}
     c[kind] = items
     c.setdefault("uploaded", {})[kind] = store.now()
+    c.setdefault("sources", {})[kind] = "upload"
     p["cluster"] = c
     p.pop("result", None)
     objplan.plans.put(p)
     return {"kind": kind, "count": len(items), "plan": _public_plan(p)}
+
+
+@app.post("/api/plans/{pid}/cluster/fetch")
+async def fetch_cluster(pid: str, body: dict | None = Body(None)):
+    """Volumes, object volumes, volume groups and objectives from the cluster API, in one go."""
+    _plan(pid)
+    try:
+        info = await hsapi.fetch_cluster_info((body or {}).get("password"))
+    except hsapi.ApiError as e:
+        raise HTTPException(422, str(e))
+    p = _plan(pid)
+    c = p.get("cluster") or {}
+    now = store.now()
+    for kind, items in info.items():
+        c[kind] = items
+        c.setdefault("uploaded", {})[kind] = now
+        c.setdefault("sources", {})[kind] = "api"
+    p["cluster"] = c
+    p.pop("result", None)
+    objplan.plans.put(p)
+    return {"counts": {k: len(v) for k, v in info.items()}, "plan": _public_plan(p)}
 
 
 @app.delete("/api/plans/{pid}/cluster/{kind}")

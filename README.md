@@ -38,7 +38,8 @@ A containerized web service for Hammerspace administrators, with two jobs:
 - **Targeted scans**: gathers only the metadata fields your conditions need (most designs use
   one to five), such as `MODIFY_AGE`, `LAST_USE_AGE`, `SIZE`, `OWNER`, `IS_ONLINE`, tags,
   labels, keywords and attributes. Folder names and paths come from walking the share.
-- **Cluster information from the CLI**: upload or paste `volume-list --full`,
+- **Cluster information from the API or the CLI**: load volumes, volume groups and objectives
+  straight from the Hammerspace management API, or upload or paste `volume-list --full`,
   `object-volume-list --full`, `volume-group-list --full` and `objective-list --full`.
   Read-only volumes, failure domains, availability, durability and online delay are picked up
   automatically.
@@ -64,8 +65,8 @@ A containerized web service for Hammerspace administrators, with two jobs:
   for every report, schedule and scan, server-wide limits such as a cap on `hs` commands at
   once, default NFS and SMB mount options, and the sign-in password. Changes apply without a
   restart.
-- **Share management**: import shares from the cluster's `share-list` output (NFS, SMB or
-  both), or add them one by one. The container mounts NFS or SMB shares itself, or uses shares
+- **Share management**: import shares from the cluster (through its management API, or from
+  `share-list` output) over NFS, SMB or both, or add them one by one. The container mounts NFS or SMB shares itself, or uses shares
   already mounted on the host, and detects and recovers stale mounts.
 - **A console-style GUI** with Hammerspace's look, optional sign-in, and a JSON API for
   everything the GUI does.
@@ -96,7 +97,7 @@ hand. If NFS mounts are refused, see [Privileged ports](docs/shares.md#importing
 
 1. **Objectives** → **New plan**: choose the share and the folder to model.
 2. Pick the fields your conditions will use, and **Scan**.
-3. Load the four CLI exports.
+3. **Load all from the cluster API**, or load the four CLI exports.
 4. Add share objectives with scopes and conditions.
 5. **Calculate space**, review the warnings, and copy the commands.
 

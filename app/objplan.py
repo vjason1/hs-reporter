@@ -361,6 +361,18 @@ def _resolve(targets, model):
     """[('group','x'),('volume','y')] -> set of volume names, plus names that weren't found."""
     out, missing = set(), []
     for kind, name in targets:
+        if kind == "anyof":  # one instance on any of several locations (from the cluster API)
+            vs, miss = _resolve(name, model)
+            out |= vs
+            missing += miss
+            continue
+        if kind == "node":  # every volume on that storage system
+            on_node = {n for n, v in model["vols"].items() if v.get("node") == name}
+            if on_node:
+                out |= on_node
+            else:
+                missing.append(f"node {name}")
+            continue
         if kind == "group":
             if name in model["groups"]:
                 out |= set(model["groups"][name])

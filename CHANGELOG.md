@@ -2,6 +2,14 @@
 
 ## 1.2.0
 
+- **Mount from DSX data addresses**: share imports and the Add share form suggest addresses on
+  DSX nodes' interfaces with the DATA role (from the cluster API's network interfaces), warn when
+  the Anvil's address is entered, and existing shares on the cluster API address are labeled
+  **Anvil address**. Previously the import used the cluster API address, which can't be mounted.
+- **Cluster API**: fetch shares, storage volumes, object volumes, volume groups and objectives
+  from the Hammerspace management API (sys-mgmt v1.2) instead of pasting CLI output, which
+  remains available. Set up under Settings → Cluster API, with Test connection, an optional
+  saved password and the last raw responses for troubleshooting.
 - **Change the sign-in password** on the Settings page (current password, new password twice),
   or turn sign-in on there if it's off. Stored as a salted PBKDF2 hash in `/data/auth.json`;
   deleting it goes back to `HSR_USER` / `HSR_PASSWORD`.

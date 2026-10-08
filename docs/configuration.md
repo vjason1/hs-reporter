@@ -51,6 +51,27 @@ The report designer and plan pages show the speed in effect, with a link to this
 
 Changing a limit also releases or holds back work already queued, within a second.
 
+### Cluster API
+
+The connection to the Hammerspace management API, used to fetch shares (Shares → Import from
+cluster) and volumes, volume groups and objectives (objective plans, step 3) instead of
+pasting CLI output:
+
+- **Cluster IP address or FQDN**, **Port** (8443) and **API path** (`/mgmt/v1.2/rest`).
+- **Username** and **Password**. With **Save the password** off, you're asked for it each
+  time data is fetched; a saved password is kept in `/data/cluster-api.json`, readable only by
+  the service. Use an account that can read the cluster's configuration.
+- **Verify the cluster's TLS certificate**: off by default, since clusters usually have a
+  self-signed certificate.
+- **Test connection** logs in and reads the cluster's name.
+
+The service logs in with `POST /login` (the session is kept as a cookie) and reads
+`GET /shares`, `/storage-volumes`, `/object-storage-volumes`, `/volume-groups`,
+`/objectives`, `/network-interfaces` and `/nodes`, page by page. The cluster API address is
+for management only: shares are mounted from DSX data addresses, which come from
+`/network-interfaces` (see [Shares and mounting](shares.md#importing-shares-from-the-cluster)). If something looks wrong after fetching, **Last API responses**
+downloads exactly what the cluster returned.
+
 ### Mount defaults
 
 The NFS (`vers=3,nolock`) and SMB (`vers=3.0,noserverino,cache=none,actimeo=0`) options used
@@ -144,6 +165,8 @@ Everything the service keeps is under `/data` (the `hsr-data` volume):
 | `plans.json`, `plans/` | Objective plans and their scans |
 | `settings.json` | Settings changed on the Settings page |
 | `auth.json` | Sign-in username and password hash, if set on the Settings page (0600) |
+| `cluster-api.json` | Cluster API connection, and its password if saved (0600) |
+| `cluster-api-responses.json` | The last responses from the cluster API, for troubleshooting (0600) |
 | `schedules.json` | Schedules |
 | `runs/` | One file per result, including the raw `hs` output |
 | `exports/` | Scheduled CSV exports and history files |

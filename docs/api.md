@@ -114,6 +114,18 @@ Keys: `crawl_preset` (`normal`, `gentle`, `slowest`, `custom`), `crawl_concurren
 `crawl_pause`, `crawl_list_rate`, `max_hs_processes`, `max_concurrent`, `run_timeout`,
 `max_output_mb`, `max_folders`, `plan_max_files`, `plan_batch`, `nfs_options`, `smb_options`.
 
+## Cluster API
+
+| Method and path | Purpose |
+|---|---|
+| `GET /api/cluster-api` | The connection (without the password; `has_password` says whether one is saved) |
+| `PUT /api/cluster-api` | `host`, `port`, `base_path`, `username`, `password`, `save_password`, `verify_tls` |
+| `POST /api/cluster-api/test` | Log in and read the cluster's name; `{"password"}` if it isn't saved |
+| `POST /api/cluster-api/mount-addresses` | DSX addresses on interfaces with the DATA role (where to mount from), and the Anvil's addresses |
+| `GET /api/cluster-api/responses` | The last raw responses from the cluster |
+| `POST /api/shares/import/fetch` | The share list from the cluster, like `/api/shares/import/parse` |
+| `POST /api/plans/{id}/cluster/fetch` | Load volumes, object volumes, volume groups and objectives into a plan |
+
 ## Sign-in
 
 | Method and path | Purpose |
